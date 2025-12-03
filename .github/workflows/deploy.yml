@@ -1,0 +1,166 @@
+name: Deploy TrainerAI Demo
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+      APP_NAME: trainerai-demo
+      DOMAIN: demo.trainerai.nickreffitt.com
+      LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+      SVR_HOST: ${{ secrets.DEMO_SVR_HOST }}
+      SVR_USERNAME: ${{ secrets.DEMO_SVR_USERNAME }}
+      SVR_PRIVATE_KEY: ${{ secrets.DEMO_SVR_PRIVATE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js application
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          ls -la .next/standalone || echo "WARNING: standalone directory not found"
+          test -d .next/standalone || (echo "ERROR: Next.js standalone build not found" && exit 1)
+          test -d .next/static || (echo "ERROR: Next.js static directory not found" && exit 1)
+
+      - name: Build Docker image locally
+        run: |
+          docker build -f ./deploy/Dockerfile -t ${{ env.APP_NAME }}:latest .
+          docker save ${{ env.APP_NAME }}:latest -o /tmp/image.tar
+          ls -la /tmp/image.tar
+
+      - name: Transfer Docker image to server
+        run: |
+          echo "${{ env.SVR_PRIVATE_KEY }}" > /tmp/ssh_key
+          chmod 600 /tmp/ssh_key
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no /tmp/image.tar ${{ env.SVR_USERNAME }}@${{ env.SVR_HOST }}:/tmp/
+          rm /tmp/ssh_key
+
+      - name: Transfer deployment files to server
+        run: |
+          echo "${{ env.SVR_PRIVATE_KEY }}" > /tmp/ssh_key
+          chmod 600 /tmp/ssh_key
+
+          # Create deployment directory on server
+          ssh -i /tmp/ssh_key -o StrictHostKeyChecking=no ${{ env.SVR_USERNAME }}@${{ env.SVR_HOST }} "mkdir -p /opt/${{ env.APP_NAME }}"
+
+          # Transfer files
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/docker-compose.yml ${{ env.SVR_USERNAME }}@${{ env.SVR_HOST }}:/opt/${{ env.APP_NAME }}/
+          scp -i /tmp/ssh_key -o StrictHostKeyChecking=no deploy/zero-downtime-deploy.sh ${{ env.SVR_USERNAME }}@${{ env.SVR_HOST }}:/opt/${{ env.APP_NAME }}/
+
+          rm /tmp/ssh_key
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SVR_HOST }}
+          username: ${{ env.SVR_USERNAME }}
+          key: ${{ env.SVR_PRIVATE_KEY }}
+          envs: APP_NAME,DOMAIN,LETSENCRYPT_EMAIL
+          script_stop: true
+          script: |
+            set -ex
+            # Update system packages
+            apt update
+
+            # Install Docker if not installed
+            echo "Checking for Docker..."
+            if command -v docker > /dev/null 2>&1; then
+              echo "Docker already installed"
+            else
+              echo "Installing Docker..."
+              apt install -y apt-transport-https ca-certificates curl software-properties-common
+              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+              apt update
+              apt install -y docker-ce docker-ce-cli containerd.io
+              systemctl start docker
+              systemctl enable docker
+              echo "Docker installed successfully"
+            fi
+            echo "Docker check completed"
+
+            # Install Docker Compose if not installed
+            echo "Checking for Docker Compose..."
+            if command -v docker-compose > /dev/null 2>&1; then
+              echo "Docker Compose already installed"
+            else
+              echo "Installing Docker Compose..."
+              curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+              echo "Docker Compose installed successfully"
+            fi
+            echo "Docker Compose check completed"
+
+            # Load Docker image from tar file
+            docker load -i "/tmp/image.tar"
+
+            # Make deploy script executable
+            chmod +x /opt/$APP_NAME/zero-downtime-deploy.sh
+
+            cd /opt/$APP_NAME
+
+            # Check if this is first time setup or update
+            if [ ! -f "/etc/nginx/sites-available/$DOMAIN" ]; then
+              echo "First time setup - installing nginx and SSL..."
+
+              # Install Certbot if needed
+              if command -v certbot > /dev/null 2>&1; then
+                echo "Certbot already installed"
+              else
+                echo "Installing Certbot..."
+                apt install -y certbot
+              fi
+
+              # Setup external nginx reverse proxy
+              apt install -y nginx
+
+              cat > "/etc/nginx/sites-available/$DOMAIN" <<EOF
+            server {
+                listen 80;
+                server_name $DOMAIN;
+
+                location / {
+                    proxy_pass http://localhost:3001;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                }
+            }
+            EOF
+              ln -sf "/etc/nginx/sites-available/$DOMAIN" /etc/nginx/sites-enabled/
+              systemctl enable nginx
+              systemctl start nginx
+              nginx -t && systemctl reload nginx
+
+              # Get SSL certificate
+              certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos --email "$LETSENCRYPT_EMAIL"
+            fi
+
+            # Always run deployment (handles both first time and updates)
+            echo "Running deployment..."
+            /opt/$APP_NAME/zero-downtime-deploy.sh
+
+            # Clean up
+            rm -f "/tmp/image.tar"
+            docker image prune -f
