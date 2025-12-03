@@ -15,7 +15,7 @@ jobs:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
       APP_NAME: trainerai-demo
-      DOMAIN: demo.trainerai.nickreffitt.com
+      DOMAIN: trainerai.nickreffitt.com
       LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
       SVR_HOST: ${{ secrets.SVR_HOST }}
       SVR_USERNAME: ${{ secrets.SVR_USERNAME }}
