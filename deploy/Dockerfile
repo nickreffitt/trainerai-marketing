@@ -15,11 +15,11 @@ COPY public ./public
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=3010
 ENV HOSTNAME="0.0.0.0"
 
 # Expose port
-EXPOSE 3001
+EXPOSE 3010
 
 # Start the Next.js server
 CMD ["node", "server.js"]

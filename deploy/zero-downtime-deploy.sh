@@ -25,20 +25,20 @@ docker rm "${NEW_CONTAINER}" 2>/dev/null || true
 
 # Determine which port to use for health check
 if [ "$EXISTING_CONTAINER" = true ]; then
-  # Old container is on 3001, use 3002 for new container
-  TEMP_PORT=3002
+  # Old container is on 3010, use 3011 for new container
+  TEMP_PORT=3011
 else
-  # No old container, use 3001 directly
-  TEMP_PORT=3001
+  # No old container, use 3010 directly
+  TEMP_PORT=3010
 fi
 
 # Start new container
 echo "Starting new container on port ${TEMP_PORT}..."
 docker run -d \
   --name "${NEW_CONTAINER}" \
-  -p ${TEMP_PORT}:3001 \
+  -p ${TEMP_PORT}:3010 \
   -e NODE_ENV=production \
-  -e PORT=3001 \
+  -e PORT=3010 \
   -e HOSTNAME=0.0.0.0 \
   --restart unless-stopped \
   ${APP_NAME}:latest
@@ -73,23 +73,23 @@ fi
 if [ "$EXISTING_CONTAINER" = true ]; then
   echo "Swapping containers..."
 
-  # Stop old container (frees up port 3001)
+  # Stop old container (frees up port 3010)
   echo "Stopping old container..."
   docker stop "${OLD_CONTAINER}" 2>/dev/null || true
   docker rm "${OLD_CONTAINER}" 2>/dev/null || true
 
   # Stop new container temporarily
-  echo "Stopping new container to rebind to port 3001..."
+  echo "Stopping new container to rebind to port 3010..."
   docker stop "${NEW_CONTAINER}"
   docker rm "${NEW_CONTAINER}"
 
   # Start container again with correct port and name
-  echo "Starting container on port 3001..."
+  echo "Starting container on port 3010..."
   docker run -d \
     --name "${OLD_CONTAINER}" \
-    -p 3001:3001 \
+    -p 3010:3010 \
     -e NODE_ENV=production \
-    -e PORT=3001 \
+    -e PORT=3010 \
     -e HOSTNAME=0.0.0.0 \
     --restart unless-stopped \
     ${APP_NAME}:latest
@@ -100,9 +100,9 @@ else
   docker rm "${NEW_CONTAINER}"
   docker run -d \
     --name "${OLD_CONTAINER}" \
-    -p 3001:3001 \
+    -p 3010:3010 \
     -e NODE_ENV=production \
-    -e PORT=3001 \
+    -e PORT=3010 \
     -e HOSTNAME=0.0.0.0 \
     --restart unless-stopped \
     ${APP_NAME}:latest
