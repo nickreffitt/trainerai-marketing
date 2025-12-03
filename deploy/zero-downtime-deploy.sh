@@ -95,8 +95,17 @@ if [ "$EXISTING_CONTAINER" = true ]; then
     ${APP_NAME}:latest
 else
   echo "Renaming new container to production name..."
-  # First time deployment - just rename the container
-  docker rename "${NEW_CONTAINER}" "${OLD_CONTAINER}"
+  # First time deployment - stop and recreate with correct name
+  docker stop "${NEW_CONTAINER}"
+  docker rm "${NEW_CONTAINER}"
+  docker run -d \
+    --name "${OLD_CONTAINER}" \
+    -p 3001:3001 \
+    -e NODE_ENV=production \
+    -e PORT=3001 \
+    -e HOSTNAME=0.0.0.0 \
+    --restart unless-stopped \
+    ${APP_NAME}:latest
 fi
 
 echo "Deployment completed successfully!"
