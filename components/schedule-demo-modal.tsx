@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface ScheduleDemoModalProps {
   open: boolean;
@@ -15,32 +16,37 @@ interface ScheduleDemoModalProps {
 }
 
 export function ScheduleDemoModal({ open, onOpenChange }: ScheduleDemoModalProps) {
+  const calendlyUrl = "https://calendly.com/me-nickreffitt/trainerai";
+
   useEffect(() => {
-    // Load Calendly script when modal opens
-    if (open && !document.querySelector('script[src*="calendly"]')) {
-      const script = document.createElement("script");
-      script.src = "https://assets.calendly.com/assets/external/widget.js";
-      script.async = true;
-      document.body.appendChild(script);
+    if (open) {
+      // Open Calendly in a new tab
+      window.open(calendlyUrl, '_blank');
+      // Close the modal immediately
+      onOpenChange(false);
     }
-  }, [open]);
+  }, [open, onOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
           <DialogTitle>Schedule a Demo</DialogTitle>
           <DialogDescription>
-            Book a time to see how TrainerAI can transform your training business.
+            Opening Calendly in a new tab...
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pb-6">
-          <div
-            className="calendly-inline-widget"
-            data-url="https://calendly.com/me-nickreffitt/trainerai"
-            style={{ minWidth: '320px', height: '500px' }}
-          />
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            If the scheduling page didn't open, click the button below:
+          </p>
+          <Button
+            onClick={() => window.open(calendlyUrl, '_blank')}
+            className="w-full"
+          >
+            Open Calendly
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

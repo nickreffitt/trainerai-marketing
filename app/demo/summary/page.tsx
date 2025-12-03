@@ -11,13 +11,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement } from 'chart.js';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement, LineController } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2';
 import { CheckCircle2, TrendingUp, Apple, Moon, Heart, Flame, Footprints, AlertTriangle, Check, Lightbulb, ClipboardList, Dumbbell, UtensilsCrossed, BarChart3, Beef, Smile, Meh, Frown, Battery, BatteryLow, Zap } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, LineElement, PointElement, LineController);
 
 type TimeRange = "day" | "week" | "block";
 type GoalType = "strength" | "endurance" | "bodycomp";
