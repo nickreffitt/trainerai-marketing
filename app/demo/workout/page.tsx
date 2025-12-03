@@ -229,6 +229,7 @@ export default function WorkoutDemo() {
             exercise: {
               id: "sub-1",
               name: "Dumbbell Bench Press",
+              type: "strength",
               sets: 4,
               reps: "6-8",
               weight: "35kg ea.",
@@ -245,6 +246,7 @@ export default function WorkoutDemo() {
             exercise: {
               id: "sub-2",
               name: "Push-ups (Weighted)",
+              type: "strength",
               sets: 4,
               reps: "15-20",
               weight: "BW + 20kg plate",

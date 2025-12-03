@@ -360,23 +360,23 @@ export default function SummaryDemo() {
 
       if (inputLower.includes("tired") || inputLower.includes("exhausted") || inputLower.includes("fatigue") || inputLower.includes("low energy")) {
         adjustedItems = adjustedItems.map(item => {
-          if (item.id === 'workout') return { ...item, subtitle: 'Upper Body Strength - Week 4 (Deload -15%)', label: 'Complete today\'s workout (reduced intensity)' };
-          if (item.id === 'calories') return { ...item, target: 1900 };
-          if (item.id === 'steps') return { ...item, target: 7000, current: Math.min(item.current || 0, 7000), label: 'Walk 7k steps (adjusted)' };
+          if (item.id === 'workout') return { ...item, subtitle: 'Upper Body Strength - Week 4 (Deload -15%)', label: 'Complete today\'s workout (reduced intensity)' } as typeof item;
+          if (item.id === 'calories') return { ...item, target: 1900 } as typeof item;
+          if (item.id === 'steps') return { ...item, target: 7000, current: Math.min(item.current || 0, 7000), label: 'Walk 7k steps (adjusted)' } as typeof item;
           return item;
         });
       } else if (inputLower.includes("sore") || inputLower.includes("pain") || inputLower.includes("hurt")) {
         adjustedItems = adjustedItems.map(item => {
-          if (item.id === 'workout') return { ...item, subtitle: 'Active Recovery - Mobility & Light Cardio', label: 'Complete active recovery session' };
-          if (item.id === 'steps') return { ...item, target: 6000, current: Math.min(item.current || 0, 6000), label: 'Walk 6k steps (adjusted)' };
+          if (item.id === 'workout') return { ...item, subtitle: 'Active Recovery - Mobility & Light Cardio', label: 'Complete active recovery session' } as typeof item;
+          if (item.id === 'steps') return { ...item, target: 6000, current: Math.min(item.current || 0, 6000), label: 'Walk 6k steps (adjusted)' } as typeof item;
           return item;
         });
       } else if (inputLower.includes("great") || inputLower.includes("amazing") || inputLower.includes("energized") || inputLower.includes("strong") || inputLower.includes("feel good") || inputLower.includes("excellent")) {
         adjustedItems = adjustedItems.map(item => {
-          if (item.id === 'workout') return { ...item, subtitle: 'Upper Body Strength - Week 4 (+1 Set)', label: 'Complete today\'s workout (bonus set!)' };
-          if (item.id === 'calories') return { ...item, target: 2400 };
-          if (item.id === 'protein') return { ...item, target: 180 };
-          if (item.id === 'steps') return { ...item, target: 12000, label: 'Walk 12k steps (bonus goal!)' };
+          if (item.id === 'workout') return { ...item, subtitle: 'Upper Body Strength - Week 4 (+1 Set)', label: 'Complete today\'s workout (bonus set!)' } as typeof item;
+          if (item.id === 'calories') return { ...item, target: 2400 } as typeof item;
+          if (item.id === 'protein') return { ...item, target: 180 } as typeof item;
+          if (item.id === 'steps') return { ...item, target: 12000, label: 'Walk 12k steps (bonus goal!)' } as typeof item;
           return item;
         });
       }
@@ -673,8 +673,64 @@ export default function SummaryDemo() {
 
                   {agendaItems.map((item, index) => {
                     const isWorkout = item.id === 'workout';
-                    const ItemWrapper = isWorkout ? Link : 'div';
-                    const wrapperProps = isWorkout ? { href: '/demo/workout' } : {};
+
+                    const content = (
+                      <div className={`space-y-2 ${isWorkout ? 'rounded-lg p-3 bg-slate-50 border border-slate-200' : ''}`}>
+                        <div className="flex items-center gap-3">
+                          {/* Checkbox */}
+                          <div className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                            item.completed
+                              ? 'bg-green-500 border-green-500'
+                              : 'border-slate-300'
+                          }`}>
+                            {item.completed && <Check className="w-3 h-3 text-white" />}
+                          </div>
+
+                          {/* Icon */}
+                          <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-white flex-shrink-0`}>
+                            {item.icon}
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <span className={`text-sm font-medium ${item.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                              {item.label}
+                            </span>
+                            {item.subtitle && (
+                              <p className="text-xs text-slate-600 mt-0.5">{item.subtitle}</p>
+                            )}
+                            {item.current !== undefined && (
+                              <p className="text-xs font-semibold text-slate-700 mt-1">
+                                {item.current.toLocaleString()} / {item.target?.toLocaleString()} {item.unit}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        {item.current !== undefined && item.target && (
+                          <div className="ml-16">
+                            <div className="w-full bg-slate-200 rounded-full h-2">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(item.current / item.target) * 100}%` }}
+                                transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
+                                className={`bg-gradient-to-r ${item.gradient} h-2 rounded-full`}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Start Workout Button */}
+                        {isWorkout && (
+                          <div className="mt-3 pt-3 border-t border-slate-200">
+                            <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                              Start Workout →
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
 
                     return (
                       <motion.div
@@ -683,63 +739,15 @@ export default function SummaryDemo() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.1 }}
                       >
-                        <ItemWrapper {...wrapperProps} className={isWorkout ? 'block' : ''}>
-                          <div className={`space-y-2 ${isWorkout ? 'rounded-lg p-3 bg-slate-50 border border-slate-200' : ''}`}>
-                            <div className="flex items-center gap-3">
-                              {/* Checkbox */}
-                              <div className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${
-                                item.completed
-                                  ? 'bg-green-500 border-green-500'
-                                  : 'border-slate-300'
-                              }`}>
-                                {item.completed && <Check className="w-3 h-3 text-white" />}
-                              </div>
-
-                              {/* Icon */}
-                              <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-white flex-shrink-0`}>
-                                {item.icon}
-                              </div>
-
-                              {/* Content */}
-                              <div className="flex-1 min-w-0">
-                                <span className={`text-sm font-medium ${item.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                                  {item.label}
-                                </span>
-                                {item.subtitle && (
-                                  <p className="text-xs text-slate-600 mt-0.5">{item.subtitle}</p>
-                                )}
-                                {item.current !== undefined && (
-                                  <p className="text-xs font-semibold text-slate-700 mt-1">
-                                    {item.current.toLocaleString()} / {item.target?.toLocaleString()} {item.unit}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Progress Bar */}
-                            {item.current !== undefined && item.target && (
-                              <div className="ml-16">
-                                <div className="w-full bg-slate-200 rounded-full h-2">
-                                  <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${(item.current / item.target) * 100}%` }}
-                                    transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                                    className={`bg-gradient-to-r ${item.gradient} h-2 rounded-full`}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Start Workout Button */}
-                            {isWorkout && (
-                              <div className="mt-3 pt-3 border-t border-slate-200">
-                                <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
-                                  Start Workout →
-                                </Button>
-                              </div>
-                            )}
+                        {isWorkout ? (
+                          <Link href="/demo/workout" className="block">
+                            {content}
+                          </Link>
+                        ) : (
+                          <div>
+                            {content}
                           </div>
-                        </ItemWrapper>
+                        )}
                       </motion.div>
                     );
                   })}

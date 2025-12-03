@@ -17,9 +17,9 @@ jobs:
       APP_NAME: trainerai-demo
       DOMAIN: demo.trainerai.nickreffitt.com
       LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
-      SVR_HOST: ${{ secrets.DEMO_SVR_HOST }}
-      SVR_USERNAME: ${{ secrets.DEMO_SVR_USERNAME }}
-      SVR_PRIVATE_KEY: ${{ secrets.DEMO_SVR_PRIVATE_KEY }}
+      SVR_HOST: ${{ secrets.SVR_HOST }}
+      SVR_USERNAME: ${{ secrets.SVR_USERNAME }}
+      SVR_PRIVATE_KEY: ${{ secrets.SVR_PRIVATE_KEY }}
 
     steps:
       - uses: actions/checkout@v4
