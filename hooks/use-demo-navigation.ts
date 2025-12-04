@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export function useDemoNavigation(page: 'summary' | 'chat' | 'workout' | 'goal') {
+export function useDemoNavigation(page: 'summary' | 'chat' | 'workout' | 'goal' | 'weekly') {
   useEffect(() => {
     // Notify parent window of navigation
     if (window.parent !== window) {

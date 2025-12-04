@@ -753,6 +753,23 @@ export default function SummaryDemo() {
                   })}
                 </motion.div>
               )}
+
+              {/* View Weekly Plan Link */}
+              {hasSubmittedFeeling && showAgenda && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.5 }}
+                  className="mt-4 pt-4 border-t border-slate-200"
+                >
+                  <Link href="/demo/weekly" className="block">
+                    <Button variant="outline" className="w-full text-blue-600 border-blue-200 hover:bg-blue-50">
+                      <ClipboardList className="w-4 h-4 mr-2" />
+                      View Weekly Plan & Goals
+                    </Button>
+                  </Link>
+                </motion.div>
+              )}
             </div>
           </Card>
         </motion.div>
