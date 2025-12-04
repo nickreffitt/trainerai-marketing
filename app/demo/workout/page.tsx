@@ -28,7 +28,13 @@ import {
   ChevronDown,
   ChevronUp,
   Video,
-  RotateCcw
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardEdit,
+  RefreshCw,
+  MessageCircle,
+  Lightbulb
 } from "lucide-react";
 
 interface SetData {
@@ -84,7 +90,8 @@ export default function WorkoutDemo() {
   const [showEditSets, setShowEditSets] = useState(false);
   const [editingSets, setEditingSets] = useState<SetData[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [isScrolledDown, setIsScrolledDown] = useState(false);
+  const workoutInfoRef = useRef<HTMLDivElement>(null);
+  const [headerProgressOpacity, setHeaderProgressOpacity] = useState(0);
 
   // For-time block timer state
   const [timerPhase, setTimerPhase] = useState<'preview' | 'prep' | 'active' | 'complete' | 'review'>('preview');
@@ -205,18 +212,35 @@ export default function WorkoutDemo() {
   const completedCount = workout.exercises.filter(e => e.completed).length;
   const progress = (completedCount / workout.exercises.length) * 100;
 
-  // Scroll detection
+  // Scroll detection - fade in header progress when scrolled past workout info
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer) return;
+    const workoutInfo = workoutInfoRef.current;
+    if (!scrollContainer || !workoutInfo) return;
 
     const handleScroll = () => {
-      const scrollTop = scrollContainer.scrollTop;
-      setIsScrolledDown(scrollTop > 20);
+      const workoutInfoRect = workoutInfo.getBoundingClientRect();
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
+
+      // Check if workout info header is scrolled out of view
+      const workoutInfoBottom = workoutInfoRect.bottom;
+      const scrollContainerTop = scrollContainerRect.top;
+
+      if (workoutInfoBottom < scrollContainerTop) {
+        // Workout info is scrolled past - fade in header progress
+        setHeaderProgressOpacity(1);
+      } else {
+        // Workout info is visible - fade out header progress
+        setHeaderProgressOpacity(0);
+      }
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial check
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const handleNeedSubstitution = () => {
@@ -538,46 +562,43 @@ export default function WorkoutDemo() {
   return (
     <div className="h-screen flex flex-col bg-slate-100">
       {/* Header */}
-      <div className="flex-none bg-white border-b px-4 py-3 flex items-center justify-between pt-10">
-        <div className="flex items-center gap-3">
-          <Link href="/demo/summary">
+      <div className="flex-none sticky top-0 z-50 bg-white border-b px-0 pt-3 flex flex-col items-center pt-0 md:pt-10 relative">
+        <div className="flex items-center justify-center w-full mb-3">
+          <Link href="/demo/summary" className="absolute left-4">
             <Button variant="ghost" size="sm">
               ← Back
             </Button>
           </Link>
-          <h1 className="text-lg font-semibold text-slate-900">Today's Workout</h1>
+          <h1 className="text-lg font-semibold text-slate-900">
+            Today's Workout
+          </h1>
         </div>
+
+        {/* Collapsed Progress Bar - fades in when scrolled */}
+        <motion.div
+          className="w-full m-0"
+          animate={{ opacity: headerProgressOpacity }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex items-center gap-3 mb-0">
+            <div className="flex-1 bg-gray-200 h-1 overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Workout Container */}
-      <div className="flex-1 flex flex-col bg-white shadow-sm overflow-hidden">
-        {/* Workout Info Header */}
-        <motion.div
-          className="flex-none border-b bg-white px-4"
-          initial={false}
-          animate={{
-            paddingTop: isScrolledDown ? 12 : 12,
-            paddingBottom: isScrolledDown ? 12 : 12
-          }}
-          transition={{
-            duration: 0.3,
-            ease: [0.4, 0, 0.2, 1]
-          }}
-        >
-          {/* Collapsible header content */}
-          <motion.div
-            className="overflow-hidden"
-            initial={false}
-            animate={{
-              height: isScrolledDown ? 0 : "auto",
-              opacity: isScrolledDown ? 0 : 1,
-              marginBottom: isScrolledDown ? 0 : 12
-            }}
-            transition={{
-              duration: 0.3,
-              ease: [0.4, 0, 0.2, 1]
-            }}
-          >
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
+        {/* Scrollable Exercise List */}
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
+          {/* Workout Info Header - inside scrollable container */}
+          <div ref={workoutInfoRef} className="bg-white rounded-lg shadow-sm border border-slate-200 px-4 py-3 mb-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-md">
                 💪
@@ -587,58 +608,39 @@ export default function WorkoutDemo() {
                 <p className="text-sm text-slate-600">{workout.goal}</p>
               </div>
             </div>
-          </motion.div>
 
-          {/* Progress bar - Always visible */}
-          <motion.div
-            className="flex items-center gap-3"
-            initial={false}
-            animate={{
-              marginBottom: isScrolledDown ? 0 : 12
-            }}
-            transition={{
-              duration: 0.3,
-              ease: [0.4, 0, 0.2, 1]
-            }}
-          >
-            <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              />
+            {/* Progress bar */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 bg-gray-200 h-2 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                />
+              </div>
+              <span className="text-sm font-semibold text-slate-600 whitespace-nowrap">
+                {completedCount} / {workout.exercises.length}
+              </span>
             </div>
-            <span className="text-sm font-medium text-slate-600">
-              {completedCount}/{workout.exercises.length}
-            </span>
-          </motion.div>
-
-          {/* Coach Notes - Collapsible */}
-          <motion.div
-            className="overflow-hidden"
-            initial={false}
-            animate={{
-              height: isScrolledDown ? 0 : "auto",
-              opacity: isScrolledDown ? 0 : 1,
-            }}
-            transition={{
-              duration: 0.3,
-              ease: [0.4, 0, 0.2, 1]
-            }}
-          >
-            <div className="bg-blue-50 rounded-lg px-3 py-2">
-              <p className="text-xs text-slate-700">
-                <strong>Coach:</strong> {workout.coachNotes}
-              </p>
-              <p className="text-xs text-slate-600 mt-1">⏱️ {workout.estimatedTime}</p>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* Scrollable Exercise List */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
+          </div>
           <div className="space-y-3 max-w-4xl mx-auto">
+            {/* Coach Notes Chat Bubble */}
+            <div className="flex gap-3 mb-4">
+              <img
+                src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop"
+                alt="Coach"
+                className="flex-none w-10 h-10 rounded-full object-cover shadow-md"
+              />
+              <div className="flex-1 max-w-[85%]">
+                <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200">
+                  <p className="text-sm text-slate-900 leading-relaxed mb-2">
+                    {workout.coachNotes}
+                  </p>
+                  <p className="text-xs text-slate-500">⏱️ {workout.estimatedTime}</p>
+                </div>
+              </div>
+            </div>
             {workout.exercises.map((exercise, idx) => {
               const isCurrent = idx === currentExerciseIndex;
 
@@ -861,8 +863,8 @@ export default function WorkoutDemo() {
 
                             {/* Coach's Note */}
                             {currentExercise.notes && (
-                              <div className="bg-amber-50 rounded-lg px-3 py-2 mb-4 flex items-start gap-2">
-                                <span className="text-amber-600 text-sm flex-shrink-0">💡</span>
+                              <div className="bg-amber-50 rounded-lg px-3 py-2 mb-4 flex items-center gap-2">
+                                <Lightbulb className="w-4 h-4 text-amber-600 flex-shrink-0" />
                                 <p className="text-xs text-slate-900">
                                   <strong>Tip:</strong> {currentExercise.notes}
                                 </p>
@@ -873,7 +875,7 @@ export default function WorkoutDemo() {
                             <Button
                               onClick={handleStartBlock}
                               size="lg"
-                              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-lg font-bold gap-2"
+                              className="w-full gap-2 bg-green-600 hover:bg-green-700"
                             >
                               <Rocket className="w-5 h-5" />
                               Start
@@ -1095,8 +1097,8 @@ export default function WorkoutDemo() {
 
                       {/* Coach's Note */}
                       {currentExercise.notes && (
-                        <div className="bg-amber-50 rounded-lg px-3 py-2 mb-3 flex items-start gap-2">
-                          <span className="text-amber-600 text-sm flex-shrink-0">💡</span>
+                        <div className="bg-amber-50 rounded-lg px-3 py-2 mb-3 flex items-center gap-2">
+                          <Lightbulb className="w-4 h-4 text-amber-600 flex-shrink-0" />
                           <p className="text-xs text-slate-900">
                             <strong>Tip:</strong> {currentExercise.notes}
                           </p>
@@ -1110,9 +1112,10 @@ export default function WorkoutDemo() {
                             onClick={handleNeedSubstitution}
                             variant="outline"
                             size="sm"
-                            className="flex-1"
+                            className="flex-1 gap-2"
                           >
-                            🔄 Substitute
+                            <RefreshCw className="w-4 h-4" />
+                            Substitute
                           </Button>
                           <Button
                             onClick={handleToggleEditSets}
@@ -1198,9 +1201,10 @@ export default function WorkoutDemo() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full"
+                            className="w-full gap-2"
                           >
-                            💬 Chat with Coach
+                            <MessageCircle className="w-4 h-4" />
+                            Chat with Coach
                           </Button>
                         </Link>
                       </div>
@@ -1230,32 +1234,33 @@ export default function WorkoutDemo() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Bottom Action Bar */}
-        <div className="flex-none border-t bg-white px-4 py-3 pb-10">
-          <div className="flex gap-2 mb-2">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentExerciseIndex(Math.max(0, currentExerciseIndex - 1))}
-              disabled={currentExerciseIndex === 0}
-              className="flex-1"
-            >
-              ← Previous
-            </Button>
-            <Button
-              onClick={() => setCurrentExerciseIndex(Math.min(workout.exercises.length - 1, currentExerciseIndex + 1))}
-              disabled={currentExerciseIndex === workout.exercises.length - 1}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-            >
-              Next →
-            </Button>
-          </div>
+      {/* Bottom Action Bar */}
+      <div className="flex-none sticky bottom-0 z-50 border-t bg-white px-4 py-3 pb-4 md:pb-10">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentExerciseIndex(Math.max(0, currentExerciseIndex - 1))}
+            disabled={currentExerciseIndex === 0}
+            className="flex-1"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowNotesDialog(true)}
-            className="w-full"
+            className="flex-1 gap-2"
           >
-            📝 Add Workout Notes
+            <ClipboardEdit className="w-4 h-4" />
+            Add Notes
+          </Button>
+          <Button
+            onClick={() => setCurrentExerciseIndex(Math.min(workout.exercises.length - 1, currentExerciseIndex + 1))}
+            disabled={currentExerciseIndex === workout.exercises.length - 1}
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
+          >
+            <ChevronRight className="w-5 h-5" />
           </Button>
         </div>
       </div>
@@ -1404,9 +1409,10 @@ export default function WorkoutDemo() {
 
                       {/* Notes */}
                       {aiModification.notes && (
-                        <div className="bg-amber-50 rounded px-3 py-2">
+                        <div className="bg-amber-50 rounded px-3 py-2 flex items-center gap-2">
+                          <Lightbulb className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
                           <p className="text-xs text-slate-900">
-                            <strong>💡 Note:</strong> {aiModification.notes}
+                            <strong>Note:</strong> {aiModification.notes}
                           </p>
                         </div>
                       )}
@@ -1575,9 +1581,10 @@ export default function WorkoutDemo() {
 
                       {/* Notes */}
                       {option.exercise.notes && (
-                        <div className="bg-amber-50 rounded px-2 py-1.5 mt-2">
+                        <div className="bg-amber-50 rounded px-2 py-1.5 mt-2 flex items-center gap-2">
+                          <Lightbulb className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
                           <p className="text-xs text-slate-900">
-                            <strong>💡 Tip:</strong> {option.exercise.notes}
+                            <strong>Tip:</strong> {option.exercise.notes}
                           </p>
                         </div>
                       )}

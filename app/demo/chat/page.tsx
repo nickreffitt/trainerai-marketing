@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useDemoNavigation } from "@/hooks/use-demo-navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
@@ -272,144 +272,150 @@ export default function AIChatDemo() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100">
+    <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="flex-none bg-white border-b px-4 py-3 flex items-center justify-between pt-10">
+      <div className="flex-none bg-white border-b px-4 py-3 flex items-center gap-3 pt-0 sticky top-0 z-10">
+        <Link href="/demo/summary">
+          <Button variant="ghost" size="sm">
+            ← Back
+          </Button>
+        </Link>
         <div className="flex items-center gap-3">
-          <Link href="/demo/summary">
-            <Button variant="ghost" size="sm">
-              ← Back
-            </Button>
-          </Link>
-          <h1 className="text-lg font-semibold text-slate-900">Messages</h1>
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-md">
+            AI
+          </div>
+          <div>
+            <h3 className="font-semibold text-slate-900">AI Coach</h3>
+            <p className="text-sm text-green-600 flex items-center gap-1">
+              <span className="h-2 w-2 bg-green-600 rounded-full animate-pulse"></span>
+              Online
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Chat Container */}
-      <div className="flex-1 flex flex-col bg-white shadow-sm overflow-hidden">
-        {/* Chat Header */}
-        <div className="flex-none border-b bg-white px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-md">
-              AI
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-900">AI Coach</h3>
-              <p className="text-sm text-green-600 flex items-center gap-1">
-                <span className="h-2 w-2 bg-green-600 rounded-full animate-pulse"></span>
-                Online
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Messages - Scrollable */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
-          <div className="space-y-4 max-w-4xl mx-auto">
-            <AnimatePresence initial={false}>
-              {messages.map((message, index) => (
+      {/* Messages - Scrollable */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4">
+        <div className="space-y-4 max-w-4xl mx-auto">
+          <AnimatePresence initial={false}>
+            {messages.map((message, index) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{
+                  duration: 0.3,
+                  ease: "easeOut",
+                }}
+                className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+              >
+                {/* Avatar */}
                 <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    duration: 0.3,
-                    ease: "easeOut",
-                  }}
-                  className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                  className={`flex-none h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shadow-sm ${
+                    message.role === "assistant"
+                      ? "bg-gradient-to-br from-blue-500 to-purple-600"
+                      : "bg-gradient-to-br from-slate-600 to-slate-800"
+                  }`}
                 >
-                  {/* Avatar */}
+                  {message.role === "assistant" ? "AI" : "U"}
+                </motion.div>
+
+                {/* Message Content */}
+                <div className={`flex-1 max-w-[70%] ${message.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
+                  {message.metadata?.type && (
+                    <motion.div
+                      initial={{ opacity: 0, x: message.role === "user" ? 10 : -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      {getMessageBadge(message.metadata.type)}
+                    </motion.div>
+                  )}
                   <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                    className={`flex-none h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shadow-sm ${
-                      message.role === "assistant"
-                        ? "bg-gradient-to-br from-blue-500 to-purple-600"
-                        : "bg-gradient-to-br from-slate-600 to-slate-800"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                    className={`rounded-2xl px-4 py-3 shadow-sm ${
+                      message.role === "user"
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-slate-900 border border-gray-200"
                     }`}
                   >
-                    {message.role === "assistant" ? "AI" : "U"}
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                   </motion.div>
-
-                  {/* Message Content */}
-                  <div className={`flex-1 max-w-[70%] ${message.role === "user" ? "items-end" : "items-start"} flex flex-col`}>
-                    {message.metadata?.type && (
-                      <motion.div
-                        initial={{ opacity: 0, x: message.role === "user" ? 10 : -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                      >
-                        {getMessageBadge(message.metadata.type)}
-                      </motion.div>
-                    )}
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.15 }}
-                      className={`rounded-2xl px-4 py-3 shadow-sm ${
-                        message.role === "user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-slate-900 border border-gray-200"
-                      }`}
-                    >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                    </motion.div>
-                    {message.metadata?.workoutChanges && message.metadata.workoutChanges.length > 0 && (
-                      <WorkoutChangesCard changes={message.metadata.workoutChanges} />
-                    )}
-                    <span className="text-xs text-slate-500 mt-1 px-2">
-                      {mounted ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {/* Invisible element at the end to scroll to */}
-            <div ref={messagesEndRef} />
-          </div>
+                  {message.metadata?.workoutChanges && message.metadata.workoutChanges.length > 0 && (
+                    <WorkoutChangesCard changes={message.metadata.workoutChanges} />
+                  )}
+                  <span className="text-xs text-slate-500 mt-1 px-2">
+                    {mounted ? message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {/* Invisible element at the end to scroll to */}
+          <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        {/* Input Area */}
-        <div className="flex-none border-t bg-white px-4 py-3 pb-10">
-          <div className="flex gap-2 mb-2">
-            <Input
-              placeholder="Ask anything..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              className="flex-1"
-            />
-            <Button onClick={handleSend} className="bg-blue-600 hover:bg-blue-700 px-6">
-              Send
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setInputValue("I don't have access to a barbell today")}
-              className="text-xs"
-            >
-              🏋️ Equipment Issue
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setInputValue("Can you make today's workout shorter? I only have 30 minutes")}
-              className="text-xs"
-            >
-              ⏱️ Time Constraint
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setInputValue("How many calories should I eat today?")}
-              className="text-xs"
-            >
-              🍽️ Nutrition Question
-            </Button>
-          </div>
+      {/* Input Area */}
+      <div className="flex-none border-t bg-white px-4 py-3 pb-3 sticky bottom-0 z-10">
+        <div className="flex gap-1.5 mb-2 overflow-x-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInputValue("I don't have access to a barbell today")}
+            className="text-xs whitespace-nowrap px-2 py-1 h-7"
+          >
+            🏋️ Equipment
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInputValue("Can you make today's workout shorter? I only have 30 minutes")}
+            className="text-xs whitespace-nowrap px-2 py-1 h-7"
+          >
+            ⏱️ Time
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setInputValue("How many calories should I eat today?")}
+            className="text-xs whitespace-nowrap px-2 py-1 h-7"
+          >
+            🍽️ Nutrition
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Textarea
+            placeholder="Ask anything..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            className="flex-1 resize-none overflow-y-auto"
+            rows={1}
+            style={{
+              minHeight: '2.5rem',
+              maxHeight: 'calc(2.5rem * 3)',
+              height: 'auto',
+            }}
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = Math.min(target.scrollHeight, 2.5 * 16 * 3) + 'px';
+            }}
+          />
+          <Button onClick={handleSend} className="bg-blue-600 hover:bg-blue-700 px-6 self-end">
+            Send
+          </Button>
         </div>
       </div>
     </div>

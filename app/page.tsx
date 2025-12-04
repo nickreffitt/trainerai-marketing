@@ -235,7 +235,7 @@ export default function Home() {
                 <IPhoneMockup>
                   <iframe
                     src={`/demo/${currentPage}?title=${encodeURIComponent(title)}&clientName=${encodeURIComponent(clientName)}`}
-                    className="w-full h-full border-0 cursor-pointer"
+                    className="w-full h-full border-0 pt-7 pb-5 cursor-pointer"
                     title="Interactive Demo - Click to interact"
                   />
                 </IPhoneMockup>
