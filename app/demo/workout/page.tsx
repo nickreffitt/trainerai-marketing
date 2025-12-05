@@ -605,7 +605,6 @@ export default function WorkoutDemo() {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-slate-900">{workout.name}</h3>
-                <p className="text-sm text-slate-600">{workout.goal}</p>
               </div>
             </div>
 

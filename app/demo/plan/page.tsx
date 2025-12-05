@@ -312,34 +312,62 @@ export default function PlanDemo() {
             </div>
 
             {/* Day Selector */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {/* Day labels */}
-              <div className="grid grid-cols-7 gap-1 px-1">
+              <div className="grid grid-cols-7 gap-1.5">
                 {["M", "T", "W", "T", "F", "S", "S"].map((letter, idx) => (
-                  <div key={idx} className="text-center text-xs font-medium text-slate-500">
+                  <div key={idx} className="text-center text-xs font-semibold text-slate-600">
                     {letter}
                   </div>
                 ))}
               </div>
 
               {/* Day buttons */}
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-1.5">
                 {weekData.map((day, index) => (
                   <motion.button
                     key={index}
                     onClick={() => setSelectedDayIndex(index)}
-                    className={`aspect-square rounded-lg text-center transition-all relative flex flex-col items-center justify-center ${
+                    className={`aspect-square rounded-xl text-center transition-all relative flex flex-col items-center justify-center p-2 ${
                       selectedDayIndex === index
-                        ? "bg-blue-600 text-white shadow-md"
+                        ? "bg-blue-600 text-white border border-blue-600 shadow-lg shadow-blue-200"
                         : day.isToday
-                        ? "bg-cyan-400 text-white"
+                        ? "bg-white text-slate-400 border border-slate-100 shadow-md"
                         : day.isPast
-                        ? "bg-white text-slate-400"
-                        : "bg-white text-slate-700 hover:bg-slate-50"
+                        ? "bg-white text-slate-400 border border-white"
+                        : "bg-white text-slate-700 hover:bg-slate-50 border border-white "
                     }`}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <p className="text-base font-semibold">{day.dayNumber}</p>
+                    <p className="text-base font-bold leading-none mb-1">{day.dayNumber}</p>
+                    {/* Workout indicator */}
+                    <div className="h-3.5 flex items-center justify-center">
+                      {day.workout && (
+                        <>
+                          {day.workout.completed ? (
+                            <div className={`w-2 h-2 rounded-full ${
+                              selectedDayIndex === index
+                                ? "bg-green-400"
+                                : "bg-green-500"
+                            }`} />
+                          ) : day.isPast ? (
+                            <div className={`w-2 h-2 rounded-full ${
+                              selectedDayIndex === index
+                                ? "bg-red-300"
+                                : "bg-red-400"
+                            }`} />
+                          ) : (
+                            <div className={`w-2 h-2 rounded-full ${
+                              selectedDayIndex === index
+                                ? "bg-white"
+                                : day.isToday
+                                ? "bg-slate-400"
+                                : "bg-blue-500"
+                            }`} />
+                          )}
+                        </>
+                      )}
+                    </div>
                   </motion.button>
                 ))}
               </div>
@@ -441,22 +469,39 @@ export default function PlanDemo() {
 
 
                   {/* Workout Button */}
-                  <Link href="/demo/workout">
-                    <Button
-                      className={`w-full ${
-                        selectedDay.workout.completed
-                          ? "bg-green-600 hover:bg-green-700"
-                          : "bg-blue-600 hover:bg-blue-700"
-                      } text-white`}
-                    >
-                      {selectedDay.workout.completed
-                        ? "View Workout"
-                        : selectedDay.isToday
-                        ? "Start Workout"
-                        : "Preview Workout"}{" "}
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </Link>
+                  {(() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const dayDate = new Date(selectedDay.date);
+                    dayDate.setHours(0, 0, 0, 0);
+                    const daysUntil = Math.ceil((dayDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    const isFarFuture = daysUntil > 7;
+
+                    let buttonText = "Preview Workout";
+                    if (selectedDay.workout.completed) {
+                      buttonText = "View Workout";
+                    } else if (selectedDay.isToday) {
+                      buttonText = "Start Workout";
+                    } else if (isFarFuture) {
+                      buttonText = daysUntil === 8 ? "Available tomorrow" : `Available in ${daysUntil - 7} days`;
+                    }
+
+                    const ButtonContent = (
+                      <Button
+                        disabled={isFarFuture}
+                        className={`w-full ${
+                          selectedDay.workout.completed
+                            ? "bg-green-600 hover:bg-green-700"
+                            : "bg-blue-600 hover:bg-blue-700"
+                        } text-white`}
+                      >
+                        {buttonText}{" "}
+                        {!isFarFuture && <ChevronRight className="w-4 h-4 ml-1" />}
+                      </Button>
+                    );
+
+                    return isFarFuture ? ButtonContent : <Link href="/demo/workout">{ButtonContent}</Link>;
+                  })()}
                 </Card>
               </motion.div>
             ) : (
