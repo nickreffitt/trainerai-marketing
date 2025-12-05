@@ -41,6 +41,7 @@ interface WorkoutPreview {
   exerciseCount: number;
   muscleGroups: string[];
   completed: boolean;
+  coachNotes: string;
 }
 
 interface DayData {
@@ -54,11 +55,18 @@ interface DayData {
   workout: WorkoutPreview | null;
 }
 
-export default function WeeklyDemo() {
-  useDemoNavigation("weekly");
+export default function PlanDemo() {
+  useDemoNavigation("plan");
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
   const [weekData, setWeekData] = useState<DayData[]>([]);
+
+  // Week 3 is the current week (consistent with summary and workout pages)
+  const CURRENT_WEEK_NUMBER = 3;
+  const TOTAL_WEEKS = 6;
+  const MIN_WEEK_OFFSET = 1 - CURRENT_WEEK_NUMBER; // Week 1
+  const MAX_WEEK_OFFSET = TOTAL_WEEKS - CURRENT_WEEK_NUMBER; // Week 6
+  const currentWeekNumber = CURRENT_WEEK_NUMBER + weekOffset;
 
   // URL parameters for customization
   const [title, setTitle] = useState("ACM Training");
@@ -89,6 +97,7 @@ export default function WeeklyDemo() {
         exerciseCount: 5,
         muscleGroups: ["Chest", "Shoulders", "Triceps"],
         completed: weekOffset < 0 || (weekOffset === 0 && today.getDay() > 1),
+        coachNotes: "Great progress on your bench press journey! This week we're focusing on controlled eccentrics to build strength in the stretch position.",
       },
       {
         id: "2",
@@ -98,6 +107,7 @@ export default function WeeklyDemo() {
         exerciseCount: 1,
         muscleGroups: ["Full Body", "Cardio"],
         completed: weekOffset < 0 || (weekOffset === 0 && today.getDay() > 2),
+        coachNotes: "Keep your heart rate steady in Zone 2 (60-70% max HR). This builds your aerobic base and supports recovery from strength training.",
       },
       {
         id: "3",
@@ -107,6 +117,7 @@ export default function WeeklyDemo() {
         exerciseCount: 6,
         muscleGroups: ["Quads", "Glutes", "Hamstrings"],
         completed: weekOffset < 0 || (weekOffset === 0 && today.getDay() > 3),
+        coachNotes: "Focus on depth and control in your squats today. We're building a strong foundation for your lower body strength goals.",
       },
       null, // Thursday - Rest
       {
@@ -117,6 +128,7 @@ export default function WeeklyDemo() {
         exerciseCount: 5,
         muscleGroups: ["Chest", "Shoulders", "Triceps"],
         completed: weekOffset < 0 || (weekOffset === 0 && today.getDay() > 5),
+        coachNotes: "Volume day for your push muscles. Focus on quality reps and mind-muscle connection rather than maxing out weight.",
       },
       {
         id: "5",
@@ -126,6 +138,7 @@ export default function WeeklyDemo() {
         exerciseCount: 8,
         muscleGroups: ["Core", "Full Body"],
         completed: weekOffset < 0 || (weekOffset === 0 && today.getDay() > 6),
+        coachNotes: "End the week strong with high-intensity work! Push hard during work intervals, but maintain good form. Your core stability is improving!",
       },
     ];
 
@@ -236,37 +249,21 @@ export default function WeeklyDemo() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto p-4 space-y-6 pt-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="pt-4 pb-2"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <Link href="/demo/summary">
-              <Button variant="ghost" size="sm" className="text-slate-600">
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Back to Summary
-              </Button>
-            </Link>
-          </div>
-          <h1
-            className="text-3xl font-black italic text-slate-900 mb-1 tracking-tight text-center"
-            style={{
-              fontFamily:
-                '"Inter", "SF Pro Display", system-ui, -apple-system, sans-serif',
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Weekly Plan
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-white border-b px-0 pt-3 flex flex-col items-center pt-0 md:pt-10">
+        <div className="flex items-center justify-center w-full mb-3">
+          <Link href="/demo/summary" className="absolute left-4">
+            <Button variant="ghost" size="sm">
+              ← Back
+            </Button>
+          </Link>
+          <h1 className="text-lg font-semibold text-slate-900">
+            Your Plan
           </h1>
-          <p className="text-lg text-slate-600 text-center">
-            Plan your week ahead, {clientName}
-          </p>
-        </motion.div>
+        </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto p-4 space-y-6">
         {/* Week Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -274,107 +271,78 @@ export default function WeeklyDemo() {
           transition={{ duration: 0.4, delay: 0.1 }}
         >
           <Card className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setWeekOffset(weekOffset - 1)}
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-              <div className="text-center">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  {weekOffset === 0
-                    ? "This Week"
-                    : weekOffset === 1
-                    ? "Next Week"
-                    : weekOffset === -1
-                    ? "Last Week"
-                    : getWeekRangeString()}
-                </h2>
-                <p className="text-sm text-slate-600">{getWeekRangeString()}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setWeekOffset(weekOffset + 1)}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {/* Week Overview Stats */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Dumbbell className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-slate-700" />
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900 uppercase tracking-wide">
+                    {weekOffset === 0
+                      ? "This Week"
+                      : weekOffset === 1
+                      ? "Next Week"
+                      : weekOffset === -1
+                      ? "Last Week"
+                      : getWeekRangeString().split(" - ")[0].split(" ")[0].toUpperCase() + " " + new Date(weekData[0]?.date || new Date()).getFullYear()}
+                  </h2>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Week {currentWeekNumber} of {TOTAL_WEEKS}
+                  </p>
                 </div>
-                <p className="text-lg font-bold text-blue-600">
-                  {completedWorkouts}/{totalWorkouts}
-                </p>
-                <p className="text-xs text-slate-600">Workouts</p>
               </div>
-              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Clock className="w-4 h-4 text-purple-600" />
-                </div>
-                <p className="text-lg font-bold text-purple-600">
-                  {Math.round(totalWorkoutMinutes / 60)}h {totalWorkoutMinutes % 60}m
-                </p>
-                <p className="text-xs text-slate-600">Total Time</p>
-              </div>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Target className="w-4 h-4 text-green-600" />
-                </div>
-                <p className="text-lg font-bold text-green-600">Week 4</p>
-                <p className="text-xs text-slate-600">of Training Block</p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setWeekOffset(weekOffset - 1)}
+                  disabled={weekOffset <= MIN_WEEK_OFFSET}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setWeekOffset(weekOffset + 1)}
+                  disabled={weekOffset >= MAX_WEEK_OFFSET}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
             </div>
 
             {/* Day Selector */}
-            <div className="grid grid-cols-7 gap-2">
-              {weekData.map((day, index) => (
-                <motion.button
-                  key={index}
-                  onClick={() => setSelectedDayIndex(index)}
-                  className={`p-2 rounded-lg text-center transition-all relative ${
-                    selectedDayIndex === index
-                      ? "bg-blue-600 text-white shadow-lg"
-                      : day.isToday
-                      ? "bg-blue-100 text-blue-700 border-2 border-blue-300"
-                      : day.isPast
-                      ? "bg-slate-100 text-slate-400"
-                      : "bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <p
-                    className={`text-xs font-medium ${
+            <div className="space-y-2">
+              {/* Day labels */}
+              <div className="grid grid-cols-7 gap-1 px-1">
+                {["M", "T", "W", "T", "F", "S", "S"].map((letter, idx) => (
+                  <div key={idx} className="text-center text-xs font-medium text-slate-500">
+                    {letter}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day buttons */}
+              <div className="grid grid-cols-7 gap-1">
+                {weekData.map((day, index) => (
+                  <motion.button
+                    key={index}
+                    onClick={() => setSelectedDayIndex(index)}
+                    className={`aspect-square rounded-lg text-center transition-all relative flex flex-col items-center justify-center ${
                       selectedDayIndex === index
-                        ? "text-white/80"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : day.isToday
+                        ? "bg-cyan-400 text-white"
                         : day.isPast
-                        ? "text-slate-400"
-                        : "text-slate-500"
+                        ? "bg-white text-slate-400"
+                        : "bg-white text-slate-700 hover:bg-slate-50"
                     }`}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    {day.dayName}
-                  </p>
-                  <p className="text-lg font-bold">{day.dayNumber}</p>
-                  {day.workout && (
-                    <div
-                      className={`w-2 h-2 rounded-full mx-auto mt-1 ${
-                        day.workout.completed
-                          ? "bg-green-400"
-                          : selectedDayIndex === index
-                          ? "bg-white/60"
-                          : "bg-blue-400"
-                      }`}
-                    />
-                  )}
-                </motion.button>
-              ))}
+                    <p className="text-base font-semibold">{day.dayNumber}</p>
+                  </motion.button>
+                ))}
+              </div>
             </div>
           </Card>
         </motion.div>
@@ -412,64 +380,54 @@ export default function WeeklyDemo() {
                 transition={{ duration: 0.3, delay: 0.1 }}
               >
                 <Card className="p-5 border-l-4 border-l-blue-500">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
-                        <Dumbbell className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-bold text-slate-900">
-                          {selectedDay.workout.name}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge
-                            variant="outline"
-                            className="text-xs bg-slate-50"
-                          >
-                            {selectedDay.workout.type}
-                          </Badge>
-                          <span className="text-sm text-slate-600">
-                            {selectedDay.workout.exerciseCount} exercises
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="mb-0">
                     {selectedDay.workout.completed ? (
-                      <Badge className="bg-green-100 text-green-700 border-green-200">
+                      <Badge className="bg-green-100 text-green-700 border-green-200 mb-2">
                         <CheckCircle2 className="w-3 h-3 mr-1" />
                         Completed
                       </Badge>
                     ) : selectedDay.isPast ? (
-                      <Badge className="bg-red-100 text-red-700 border-red-200">
+                      <Badge className="bg-red-100 text-red-700 border-red-200 mb-2">
                         Missed
                       </Badge>
                     ) : null}
-                  </div>
-
-                  {/* Workout Details */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-                      <Clock className="w-5 h-5 text-slate-500" />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {selectedDay.workout.estimatedMinutes} min
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                        {selectedDay.workout.type === "Cardio" ? (
+                          <Footprints className="w-6 h-6" />
+                        ) : (
+                          <Dumbbell className="w-6 h-6" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-lg font-bold text-slate-900">
+                          {selectedDay.workout.name}
+                        </h4>
+                        <p className="text-sm text-slate-600 mt-0">
+                          {selectedDay.workout.estimatedMinutes} minutes
                         </p>
-                        <p className="text-xs text-slate-600">Est. Duration</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-                      <Zap className="w-5 h-5 text-slate-500" />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {selectedDay.workout.muscleGroups.slice(0, 2).join(", ")}
+                  </div>
+
+                  {/* Coach Notes */}
+                  <div className="flex gap-3 my-0">
+                    <img
+                      src="https://images.unsplash.com/photo-1594381898411-846e7d193883?w=100&h=100&fit=crop"
+                      alt="Coach"
+                      className="flex-none w-10 h-10 rounded-full object-cover shadow-md"
+                    />
+                    <div className="flex-1">
+                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200">
+                        <p className="text-sm text-slate-900 leading-relaxed">
+                          {selectedDay.workout.coachNotes}
                         </p>
-                        <p className="text-xs text-slate-600">Focus Areas</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Muscle Groups Tags */}
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2 mb-0">
                     {selectedDay.workout.muscleGroups.map((muscle, idx) => (
                       <Badge
                         key={idx}
@@ -481,15 +439,24 @@ export default function WeeklyDemo() {
                     ))}
                   </div>
 
-                  {/* Start Workout Button */}
-                  {!selectedDay.workout.completed && !selectedDay.isPast && (
-                    <Link href="/demo/workout">
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                        {selectedDay.isToday ? "Start Workout" : "Preview Workout"}{" "}
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </Link>
-                  )}
+
+                  {/* Workout Button */}
+                  <Link href="/demo/workout">
+                    <Button
+                      className={`w-full ${
+                        selectedDay.workout.completed
+                          ? "bg-green-600 hover:bg-green-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      } text-white`}
+                    >
+                      {selectedDay.workout.completed
+                        ? "View Workout"
+                        : selectedDay.isToday
+                        ? "Start Workout"
+                        : "Preview Workout"}{" "}
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
                 </Card>
               </motion.div>
             ) : (

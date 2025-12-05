@@ -104,8 +104,8 @@ export default function WorkoutDemo() {
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [workout, setWorkout] = useState({
-    name: "Upper Body Strength - Week 4",
-    goal: "Increase bench press 1RM by 10kg",
+    name: "Upper Body Strength",
+    goal: "Week 3 of 6: Increase bench press 1RM by 10kg",
     coachNotes: "Great progress on your bench press journey! This week we're focusing on controlled eccentrics to build strength in the stretch position.",
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     estimatedTime: "55-65 minutes",
@@ -628,7 +628,7 @@ export default function WorkoutDemo() {
             {/* Coach Notes Chat Bubble */}
             <div className="flex gap-3 mb-4">
               <img
-                src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop"
+                src="https://images.unsplash.com/photo-1594381898411-846e7d193883?w=100&h=100&fit=crop"
                 alt="Coach"
                 className="flex-none w-10 h-10 rounded-full object-cover shadow-md"
               />
