@@ -34,38 +34,9 @@ import {
   ClipboardEdit,
   RefreshCw,
   MessageCircle,
-  Lightbulb
+  Lightbulb,
 } from "lucide-react";
-
-interface SetData {
-  reps: number;
-  weight: number;
-}
-
-interface Segment {
-  name: string;
-  durationMinutes: number;
-  zone?: string;
-  videoId: string;
-  actualDurationMinutes?: number;
-}
-
-interface Exercise {
-  id: string;
-  name: string;
-  type: 'strength' | 'for-time';
-  sets: number;
-  reps: string;
-  weight?: string;
-  notes?: string;
-  restSeconds: number;
-  equipment: string[];
-  muscleGroups: string[];
-  completed?: boolean;
-  videoId: string;
-  setData?: SetData[];
-  segments?: Segment[];
-}
+import { Workout, Exercise, SetData, Segment, EmomInterval, AmrapExercise } from "@/types/workout";
 
 interface SubstitutionOption {
   exercise: Exercise;
@@ -102,6 +73,17 @@ export default function WorkoutDemo() {
   const [showVideos, setShowVideos] = useState(false);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // EMOM timer state
+  const [emomCurrentRound, setEmomCurrentRound] = useState(0);
+  const [emomCurrentIntervalIndex, setEmomCurrentIntervalIndex] = useState(0);
+  const [emomIntervalTimeRemaining, setEmomIntervalTimeRemaining] = useState(0);
+  const [emomTotalTimeElapsed, setEmomTotalTimeElapsed] = useState(0);
+  const [editingEmomIntervals, setEditingEmomIntervals] = useState<EmomInterval[]>([]);
+
+  // AMRAP timer state
+  const [amrapTimeRemaining, setAmrapTimeRemaining] = useState(0);
+  const [amrapRoundsCompleted, setAmrapRoundsCompleted] = useState(0);
 
   const [workout, setWorkout] = useState({
     name: "Upper Body Strength",
@@ -202,6 +184,73 @@ export default function WorkoutDemo() {
             durationMinutes: 5,
             zone: "Zone 2",
             videoId: "9GiQvt0rxaU",
+          },
+        ],
+      },
+      {
+        id: "6",
+        type: "emom",
+        name: "E2MOM Sled Work",
+        sets: 0,
+        reps: "",
+        notes: "Push hard on the sled movements, maintain consistent intensity",
+        restSeconds: 0,
+        equipment: ["Sled", "Weight Plates"],
+        muscleGroups: ["Legs", "Full Body", "Cardio"],
+        completed: false,
+        videoId: "",
+        emomIntervalSeconds: 10, // Every 10 seconds
+        emomTotalMinutes: 1,
+        emomIntervals: [
+          {
+            name: "Sled Push",
+            reps: "40m",
+            weight: "90kg",
+            notes: "Low position, drive through legs",
+            videoId: "kCKZklD87gQ",
+          },
+          {
+            name: "Sled Pull",
+            reps: "40m",
+            weight: "70kg",
+            notes: "Lean back, use full body",
+            videoId: "esDZsKQklpU",
+          },
+        ],
+      },
+      {
+        id: "7",
+        type: "amrap",
+        name: "15 Minute AMRAP",
+        sets: 0,
+        reps: "",
+        notes: "Move at a steady pace, don't burn out early",
+        restSeconds: 0,
+        equipment: ["Pull-up Bar", "Kettlebell", "Box"],
+        muscleGroups: ["Full Body", "Cardio"],
+        completed: false,
+        videoId: "",
+        amrapDurationMinutes: 15,
+        amrapExercises: [
+          {
+            name: "Pull-ups",
+            reps: "10",
+            notes: "Scale to assisted if needed",
+            videoId: "eGo4IYlbE5g",
+          },
+          {
+            name: "Kettlebell Swings",
+            reps: "15",
+            weight: "24kg",
+            notes: "Hip hinge, explosive",
+            videoId: "YSxHYTkXZXQ",
+          },
+          {
+            name: "Box Jumps",
+            reps: "20",
+            weight: "24\"",
+            notes: "Step down, don't jump down",
+            videoId: "NBY9-kTuHEk",
           },
         ],
       },
@@ -486,6 +535,124 @@ export default function WorkoutDemo() {
     setEditingSegments(newSegments);
   };
 
+  // EMOM handlers
+  const handleStartEmom = () => {
+    setTimerPhase('prep');
+    setTimeRemainingSeconds(10);
+    setEmomCurrentRound(0);
+    setEmomCurrentIntervalIndex(0);
+    setEmomTotalTimeElapsed(0);
+    setIsPaused(false);
+    setShowVideos(false);
+  };
+
+  const handleRestartEmom = () => {
+    setShowRestartDialog(true);
+  };
+
+  const handleConfirmRestartEmom = () => {
+    const newExercises = [...workout.exercises];
+    if (newExercises[currentExerciseIndex].emomIntervals) {
+      newExercises[currentExerciseIndex].emomIntervals = newExercises[currentExerciseIndex].emomIntervals?.map(interval => ({
+        ...interval,
+        actualRounds: undefined
+      }));
+    }
+    newExercises[currentExerciseIndex].completed = false;
+    setWorkout({ ...workout, exercises: newExercises });
+
+    setTimerPhase('preview');
+    setEmomCurrentRound(0);
+    setEmomCurrentIntervalIndex(0);
+    setEmomIntervalTimeRemaining(0);
+    setEmomTotalTimeElapsed(0);
+    setIsPaused(false);
+    setShowRestartDialog(false);
+    setShowVideos(false);
+  };
+
+  const handleFinishEmomEarly = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    setTimerPhase('review');
+    if (currentExercise.emomIntervals) {
+      setEditingEmomIntervals(currentExercise.emomIntervals.map(interval => ({
+        ...interval,
+        actualRounds: 0
+      })));
+    }
+  };
+
+  const handleSaveEmom = () => {
+    const newExercises = [...workout.exercises];
+    if (newExercises[currentExerciseIndex].emomIntervals) {
+      newExercises[currentExerciseIndex].emomIntervals = editingEmomIntervals;
+    }
+    newExercises[currentExerciseIndex].completed = true;
+    setWorkout({ ...workout, exercises: newExercises });
+
+    setTimerPhase('preview');
+    setEmomCurrentRound(0);
+    setEmomCurrentIntervalIndex(0);
+    setEmomIntervalTimeRemaining(0);
+    setEmomTotalTimeElapsed(0);
+    setIsPaused(false);
+  };
+
+  const handleUpdateEmomInterval = (index: number, value: string) => {
+    const numValue = parseInt(value) || 0;
+    const newIntervals = [...editingEmomIntervals];
+    newIntervals[index] = { ...newIntervals[index], actualRounds: numValue };
+    setEditingEmomIntervals(newIntervals);
+  };
+
+  // AMRAP handlers
+  const handleStartAmrap = () => {
+    setTimerPhase('prep');
+    setTimeRemainingSeconds(10);
+    setAmrapRoundsCompleted(0);
+    setIsPaused(false);
+    setShowVideos(false);
+  };
+
+  const handleRestartAmrap = () => {
+    setShowRestartDialog(true);
+  };
+
+  const handleConfirmRestartAmrap = () => {
+    const newExercises = [...workout.exercises];
+    newExercises[currentExerciseIndex].amrapRoundsCompleted = undefined;
+    newExercises[currentExerciseIndex].completed = false;
+    setWorkout({ ...workout, exercises: newExercises });
+
+    setTimerPhase('preview');
+    setAmrapTimeRemaining(0);
+    setAmrapRoundsCompleted(0);
+    setIsPaused(false);
+    setShowRestartDialog(false);
+    setShowVideos(false);
+  };
+
+  const handleFinishAmrapEarly = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    setTimerPhase('review');
+  };
+
+  const handleSaveAmrap = () => {
+    const newExercises = [...workout.exercises];
+    newExercises[currentExerciseIndex].amrapRoundsCompleted = amrapRoundsCompleted;
+    newExercises[currentExerciseIndex].completed = true;
+    setWorkout({ ...workout, exercises: newExercises });
+
+    setTimerPhase('preview');
+    setAmrapTimeRemaining(0);
+    setAmrapRoundsCompleted(0);
+    setIsPaused(false);
+  };
+
   // Timer effect
   useEffect(() => {
     if (isPaused || timerPhase === 'preview' || timerPhase === 'review' || timerPhase === 'complete') {
@@ -493,34 +660,100 @@ export default function WorkoutDemo() {
     }
 
     timerIntervalRef.current = setInterval(() => {
-      setTimeRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          // Time's up for current phase/segment
-          if (timerPhase === 'prep') {
-            // Move to first segment
-            if (currentExercise.segments && currentExercise.segments.length > 0) {
+      // AMRAP Timer Logic
+      if (currentExercise.type === 'amrap') {
+        setAmrapTimeRemaining((prev) => {
+          if (prev <= 1) {
+            if (timerPhase === 'prep') {
+              // Start AMRAP timer
               setTimerPhase('active');
-              setCurrentSegmentIndex(0);
-              return currentExercise.segments[0].durationMinutes * 60;
-            }
-          } else if (timerPhase === 'active') {
-            // Move to next segment or complete
-            if (currentExercise.segments && currentSegmentIndex < currentExercise.segments.length - 1) {
-              const nextIndex = currentSegmentIndex + 1;
-              setCurrentSegmentIndex(nextIndex);
-              return currentExercise.segments[nextIndex].durationMinutes * 60;
-            } else {
-              // All segments complete
+              return (currentExercise.amrapDurationMinutes || 0) * 60;
+            } else if (timerPhase === 'active') {
+              // AMRAP complete
               setTimerPhase('complete');
               setTimeout(() => {
-                handleFinishEarly(); // Transition to review
+                handleFinishAmrapEarly();
               }, 2000);
               return 0;
             }
           }
-        }
-        return prev - 1;
-      });
+          return prev - 1;
+        });
+      } else if (currentExercise.type === 'emom') {
+        // EMOM Timer Logic
+        setEmomTotalTimeElapsed((prev) => prev + 1);
+        setEmomIntervalTimeRemaining((prev) => {
+          if (prev <= 1) {
+            // Interval complete - move to next
+            if (timerPhase === 'prep') {
+              // Start first interval
+              setTimerPhase('active');
+              setEmomCurrentIntervalIndex(0);
+              setEmomCurrentRound(1);
+              return currentExercise.emomIntervalSeconds || 60;
+            } else if (timerPhase === 'active') {
+              const totalMinutes = currentExercise.emomTotalMinutes || 0;
+              const totalSeconds = totalMinutes * 60;
+
+              if (emomTotalTimeElapsed >= totalSeconds - 1) {
+                // EMOM complete
+                setTimerPhase('complete');
+                setTimeout(() => {
+                  handleFinishEmomEarly();
+                }, 2000);
+                return 0;
+              } else {
+                // Move to next interval
+                const intervals = currentExercise.emomIntervals || [];
+                const nextIntervalIndex = intervals.length > 0
+                  ? (emomCurrentIntervalIndex + 1) % intervals.length
+                  : 0;
+                setEmomCurrentIntervalIndex(nextIntervalIndex);
+
+                // Increment round when we cycle back to first interval
+                if (nextIntervalIndex === 0 && intervals.length > 1) {
+                  setEmomCurrentRound((prev) => prev + 1);
+                } else if (intervals.length === 1) {
+                  setEmomCurrentRound((prev) => prev + 1);
+                }
+
+                return currentExercise.emomIntervalSeconds || 60;
+              }
+            }
+          }
+          return prev - 1;
+        });
+      } else {
+        // For-Time Timer Logic (existing)
+        setTimeRemainingSeconds((prev) => {
+          if (prev <= 1) {
+            // Time's up for current phase/segment
+            if (timerPhase === 'prep') {
+              // Move to first segment
+              if (currentExercise.segments && currentExercise.segments.length > 0) {
+                setTimerPhase('active');
+                setCurrentSegmentIndex(0);
+                return currentExercise.segments[0].durationMinutes * 60;
+              }
+            } else if (timerPhase === 'active') {
+              // Move to next segment or complete
+              if (currentExercise.segments && currentSegmentIndex < currentExercise.segments.length - 1) {
+                const nextIndex = currentSegmentIndex + 1;
+                setCurrentSegmentIndex(nextIndex);
+                return currentExercise.segments[nextIndex].durationMinutes * 60;
+              } else {
+                // All segments complete
+                setTimerPhase('complete');
+                setTimeout(() => {
+                  handleFinishEarly(); // Transition to review
+                }, 2000);
+                return 0;
+              }
+            }
+          }
+          return prev - 1;
+        });
+      }
     }, 1000);
 
     return () => {
@@ -528,7 +761,7 @@ export default function WorkoutDemo() {
         clearInterval(timerIntervalRef.current);
       }
     };
-  }, [timerPhase, isPaused, currentSegmentIndex, currentExercise]);
+  }, [timerPhase, isPaused, currentSegmentIndex, currentExercise, emomCurrentIntervalIndex, emomCurrentRound, emomTotalTimeElapsed]);
 
   const handleSubmitNote = () => {
     if (!workoutNote.trim() || isSubmittingNote) return;
@@ -677,6 +910,10 @@ export default function WorkoutDemo() {
                         <p className="text-xs text-slate-600 mt-1">
                           {exercise.type === 'for-time'
                             ? `${exercise.segments?.reduce((sum, seg) => sum + seg.durationMinutes, 0)}' group · ${exercise.segments?.length} movements`
+                            : exercise.type === 'emom'
+                            ? `E${(exercise.emomIntervalSeconds || 60) / 60}MOM · ${exercise.emomTotalMinutes}' · ${exercise.emomIntervals?.length} movements`
+                            : exercise.type === 'amrap'
+                            ? `${exercise.amrapDurationMinutes}' AMRAP · ${exercise.amrapExercises?.length} movements`
                             : `${exercise.sets} sets × ${exercise.reps} @ ${exercise.weight}`
                           }
                         </p>
@@ -700,8 +937,8 @@ export default function WorkoutDemo() {
                   transition={{ duration: 0.3 }}
                 >
                   <Badge className="mb-2 bg-blue-600 gap-1.5">
-                    {exercise.type === 'for-time' ? <Timer className="w-3.5 h-3.5" /> : null}
-                    Current {exercise.type === 'for-time' ? 'Exercise Group' : 'Exercise'}
+                    {(exercise.type === 'for-time' || exercise.type === 'emom' || exercise.type === 'amrap') ? <Timer className="w-3.5 h-3.5" /> : null}
+                    Current {(exercise.type === 'for-time' || exercise.type === 'emom' || exercise.type === 'amrap') ? 'Exercise Group' : 'Exercise'}
                   </Badge>
                   <Card className="border-2 border-blue-500 shadow-lg overflow-hidden p-0 gap-0">
                     {/* Exercise Header */}
@@ -1036,6 +1273,715 @@ export default function WorkoutDemo() {
                               </Button>
                               <Button
                                 onClick={handleSaveBlock}
+                                size="sm"
+                                className="flex-1 bg-green-600 hover:bg-green-700 gap-2"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* EMOM BLOCK */}
+                    {currentExercise.type === 'emom' && currentExercise.emomIntervals && (
+                      <>
+                        {/* Completed State */}
+                        {timerPhase === 'preview' && currentExercise.completed && (
+                          <div className="px-4 py-4">
+                            {/* Completion Badge */}
+                            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg p-6 text-center mb-4 text-white">
+                              <Trophy className="w-12 h-12 mx-auto mb-3" />
+                              <div className="text-2xl font-bold mb-1">EMOM Completed!</div>
+                              <div className="text-sm font-medium opacity-90">
+                                E{(currentExercise.emomIntervalSeconds || 60) / 60}MOM · {currentExercise.emomTotalMinutes} minutes
+                              </div>
+                            </div>
+
+                            {/* Results Summary */}
+                            <h4 className="font-semibold text-slate-900 mb-3">Movements:</h4>
+                            <div className="space-y-2 mb-4">
+                              {currentExercise.emomIntervals.map((interval, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">
+                                      {idx + 1}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-900">{interval.name}</p>
+                                      <p className="text-xs text-slate-600">
+                                        {interval.reps} {interval.weight ? `@ ${interval.weight}` : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-lg font-bold text-green-600">
+                                      {interval.actualRounds || 0} rounds
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Equipment */}
+                            <div className="mb-4">
+                              <p className="text-xs font-medium text-slate-600 mb-2">EQUIPMENT USED:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                {currentExercise.equipment.map((eq) => (
+                                  <Badge key={eq} variant="outline" className="text-xs">
+                                    {eq}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Restart Button */}
+                            <Button
+                              onClick={handleRestartEmom}
+                              variant="outline"
+                              size="lg"
+                              className="w-full gap-2"
+                            >
+                              <RotateCcw className="w-5 h-5" />
+                              Restart
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Preview Mode */}
+                        {timerPhase === 'preview' && !currentExercise.completed && (
+                          <div className="px-4 py-4">
+                            {/* EMOM Info Display */}
+                            <div className="bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg p-6 text-center mb-4 text-white">
+                              <div className="text-5xl font-bold mb-2">
+                                E{(currentExercise.emomIntervalSeconds || 60) / 60}MOM
+                              </div>
+                              <div className="text-sm font-medium mb-1">
+                                {currentExercise.emomTotalMinutes} MINUTES TOTAL
+                              </div>
+                              <div className="text-xs opacity-90">
+                                Every {(currentExercise.emomIntervalSeconds || 60)} seconds
+                              </div>
+                            </div>
+
+                            {/* Intervals Preview */}
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-slate-900">Movements:</h4>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowVideos(!showVideos)}
+                                className="gap-2"
+                              >
+                                <Video className="w-4 h-4" />
+                                {showVideos ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                {showVideos ? 'Hide' : 'Show'} Videos
+                              </Button>
+                            </div>
+                            <div className="space-y-3 mb-4">
+                              {currentExercise.emomIntervals.map((interval, idx) => (
+                                <div key={idx} className="border rounded-lg overflow-hidden">
+                                  <div className="flex items-center gap-3 p-3 bg-slate-50">
+                                    <div className="flex-shrink-0">
+                                      <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                                        {idx + 1}
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h5 className="font-semibold text-slate-900">{interval.name}</h5>
+                                      <p className="text-xs text-slate-600">
+                                        {interval.reps} {interval.weight ? `@ ${interval.weight}` : ''}
+                                      </p>
+                                      {interval.notes && (
+                                        <p className="text-xs text-slate-500 italic mt-1">{interval.notes}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {/* Video Preview - Collapsible */}
+                                  <AnimatePresence>
+                                    {showVideos && interval.videoId && (
+                                      <motion.div
+                                        initial={{ height: 0 }}
+                                        animate={{ height: "auto" }}
+                                        exit={{ height: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="relative w-full aspect-video">
+                                          <iframe
+                                            src={`https://www.youtube.com/embed/${interval.videoId}?controls=0`}
+                                            className="w-full h-full"
+                                            allow="encrypted-media"
+                                            allowFullScreen
+                                          />
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Equipment */}
+                            <div className="mb-4">
+                              <p className="text-xs font-medium text-slate-600 mb-2">EQUIPMENT NEEDED:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                {currentExercise.equipment.map((eq) => (
+                                  <Badge key={eq} variant="outline" className="text-xs">
+                                    {eq}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Coach's Note */}
+                            {currentExercise.notes && (
+                              <div className="bg-amber-50 rounded-lg px-3 py-2 mb-4 flex items-center gap-2">
+                                <Lightbulb className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                <p className="text-xs text-slate-900">
+                                  <strong>Tip:</strong> {currentExercise.notes}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Start Button */}
+                            <Button
+                              onClick={handleStartEmom}
+                              size="lg"
+                              className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                            >
+                              <Rocket className="w-5 h-5" />
+                              Start
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Prep Countdown */}
+                        {timerPhase === 'prep' && (
+                          <div className="px-4 py-8">
+                            <div className="text-center">
+                              <h3 className="text-2xl font-bold text-slate-900 mb-4">Get Ready!</h3>
+                              <div
+                                className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full w-40 h-40 mx-auto flex items-center justify-center text-white shadow-2xl mb-2 cursor-pointer hover:scale-105 transition-transform active:scale-95"
+                                onClick={() => {
+                                  if (currentExercise.emomIntervals && currentExercise.emomIntervals.length > 0) {
+                                    setTimerPhase('active');
+                                    setEmomCurrentIntervalIndex(0);
+                                    setEmomCurrentRound(1);
+                                    setEmomIntervalTimeRemaining(currentExercise.emomIntervalSeconds || 60);
+                                  }
+                                }}
+                              >
+                                <div className="text-7xl font-bold">{timeRemainingSeconds}</div>
+                              </div>
+                              <p className="text-sm text-slate-500 mb-6">Tap to Skip</p>
+                              {currentExercise.emomIntervals && currentExercise.emomIntervals.length > 0 && (
+                                <>
+                                  <p className="text-lg text-slate-600 mb-2">First Movement:</p>
+                                  <p className="text-xl font-bold text-slate-900">
+                                    {currentExercise.emomIntervals[0].name}
+                                  </p>
+                                  <p className="text-slate-600">
+                                    {currentExercise.emomIntervals[0].reps} {currentExercise.emomIntervals[0].weight ? `@ ${currentExercise.emomIntervals[0].weight}` : ''}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Active Timer */}
+                        {(timerPhase === 'active' || timerPhase === 'complete') && (
+                          <div className="px-4 py-6">
+                            {/* Current Movement */}
+                            <div className="text-center mb-6">
+                              <Badge className="mb-3 text-sm bg-blue-600 gap-1.5">
+                                <Timer className="w-4 h-4" />
+                                Round {emomCurrentRound} · E{(currentExercise.emomIntervalSeconds || 60) / 60}MOM
+                              </Badge>
+                              <h3 className="text-3xl font-bold text-slate-900 mb-0">
+                                {currentExercise.emomIntervals[emomCurrentIntervalIndex]?.name}
+                              </h3>
+                              <p className="text-slate-600">
+                                {currentExercise.emomIntervals[emomCurrentIntervalIndex]?.reps}{' '}
+                                {currentExercise.emomIntervals[emomCurrentIntervalIndex]?.weight
+                                  ? `@ ${currentExercise.emomIntervals[emomCurrentIntervalIndex]?.weight}`
+                                  : ''}
+                              </p>
+                            </div>
+
+                            {/* Timer Display */}
+                            <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-5 text-center mb-6 shadow-2xl">
+                              <div className="text-7xl font-bold text-white mb-0">
+                                {Math.floor(emomIntervalTimeRemaining / 60)}:{String(emomIntervalTimeRemaining % 60).padStart(2, '0')}
+                              </div>
+                              <div className="text-sm font-medium text-white/90">TIME REMAINING IN INTERVAL</div>
+                              <div className="text-xs font-medium text-white/70 mt-2">
+                                Total Time: {Math.floor(emomTotalTimeElapsed / 60)}:{String(emomTotalTimeElapsed % 60).padStart(2, '0')} / {currentExercise.emomTotalMinutes}:00
+                              </div>
+                            </div>
+
+                            {/* Next Movement Preview */}
+                            {currentExercise.emomIntervals.length > 1 && timerPhase === 'active' && (
+                              <div className="bg-slate-50 rounded-lg p-3 mb-4">
+                                <p className="text-xs font-medium text-slate-600 mb-1">UP NEXT:</p>
+                                <p className="text-sm font-semibold text-slate-900">
+                                  {currentExercise.emomIntervals[(emomCurrentIntervalIndex + 1) % currentExercise.emomIntervals.length].name}
+                                  {' - '}
+                                  {currentExercise.emomIntervals[(emomCurrentIntervalIndex + 1) % currentExercise.emomIntervals.length].reps}
+                                  {currentExercise.emomIntervals[(emomCurrentIntervalIndex + 1) % currentExercise.emomIntervals.length].weight
+                                    ? ` @ ${currentExercise.emomIntervals[(emomCurrentIntervalIndex + 1) % currentExercise.emomIntervals.length].weight}`
+                                    : ''}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Control Buttons */}
+                            {timerPhase === 'active' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={handlePauseResume}
+                                  variant="outline"
+                                  size="lg"
+                                  className="flex-1 gap-2"
+                                >
+                                  {isPaused ? (
+                                    <>
+                                      <Play className="w-5 h-5" />
+                                      Resume
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Pause className="w-5 h-5" />
+                                      Pause
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  onClick={handleFinishEmomEarly}
+                                  variant="outline"
+                                  size="lg"
+                                  className="flex-1 border-red-300 text-red-600 hover:bg-red-50 gap-2"
+                                >
+                                  <Flag className="w-5 h-5" />
+                                  Finish Early
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* Complete Message */}
+                            {timerPhase === 'complete' && (
+                              <div className="text-center">
+                                <Trophy className="w-16 h-16 mx-auto mb-4 text-green-600" />
+                                <h3 className="text-2xl font-bold text-green-600 mb-2">EMOM Complete!</h3>
+                                <p className="text-slate-600">Great work! Reviewing your rounds...</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Review Mode */}
+                        {timerPhase === 'review' && (
+                          <div className="px-4 py-4">
+                            <h4 className="font-semibold text-slate-900 mb-4">Review Your Rounds:</h4>
+
+                            <div className="space-y-4 mb-6">
+                              {/* Grid Header */}
+                              <div className="grid grid-cols-[1fr_100px] gap-3 items-center font-semibold text-sm text-slate-700">
+                                <div>Movement</div>
+                                <div className="text-center">Rounds</div>
+                              </div>
+
+                              {/* Interval Rows */}
+                              <div className="space-y-3">
+                                {editingEmomIntervals.map((interval, index) => (
+                                  <div key={index} className="grid grid-cols-[1fr_100px] gap-3 items-center p-3 bg-slate-50 rounded-lg">
+                                    <div>
+                                      <p className="text-sm font-medium text-slate-900">{interval.name}</p>
+                                      <p className="text-xs text-slate-600">
+                                        {interval.reps} {interval.weight ? `@ ${interval.weight}` : ''}
+                                      </p>
+                                    </div>
+                                    <Input
+                                      type="number"
+                                      inputMode="numeric"
+                                      value={interval.actualRounds || 0}
+                                      onChange={(e) => handleUpdateEmomInterval(index, e.target.value)}
+                                      placeholder="0"
+                                      className="text-center"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setTimerPhase('preview')}
+                                className="flex-1"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={handleSaveEmom}
+                                size="sm"
+                                className="flex-1 bg-green-600 hover:bg-green-700 gap-2"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* AMRAP BLOCK */}
+                    {currentExercise.type === 'amrap' && currentExercise.amrapExercises && (
+                      <>
+                        {/* Completed State */}
+                        {timerPhase === 'preview' && currentExercise.completed && (
+                          <div className="px-4 py-4">
+                            {/* Completion Badge */}
+                            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg p-6 text-center mb-4 text-white">
+                              <Trophy className="w-12 h-12 mx-auto mb-3" />
+                              <div className="text-2xl font-bold mb-1">AMRAP Completed!</div>
+                              <div className="text-sm font-medium opacity-90">
+                                {currentExercise.amrapDurationMinutes} minutes
+                              </div>
+                            </div>
+
+                            {/* Results Summary */}
+                            <div className="bg-blue-50 rounded-lg p-4 mb-4 text-center">
+                              <p className="text-sm text-slate-600 mb-1">TOTAL ROUNDS COMPLETED</p>
+                              <p className="text-4xl font-bold text-blue-600">
+                                {currentExercise.amrapRoundsCompleted || 0}
+                              </p>
+                            </div>
+
+                            <h4 className="font-semibold text-slate-900 mb-3">Round Breakdown:</h4>
+                            <div className="space-y-2 mb-4">
+                              {currentExercise.amrapExercises.map((exercise, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-bold">
+                                      {idx + 1}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-900">{exercise.name}</p>
+                                      <p className="text-xs text-slate-600">
+                                        {exercise.reps} reps {exercise.weight ? `@ ${exercise.weight}` : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Equipment */}
+                            <div className="mb-4">
+                              <p className="text-xs font-medium text-slate-600 mb-2">EQUIPMENT USED:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                {currentExercise.equipment.map((eq) => (
+                                  <Badge key={eq} variant="outline" className="text-xs">
+                                    {eq}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Restart Button */}
+                            <Button
+                              onClick={handleRestartAmrap}
+                              variant="outline"
+                              size="lg"
+                              className="w-full gap-2"
+                            >
+                              <RotateCcw className="w-5 h-5" />
+                              Restart
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Preview Mode */}
+                        {timerPhase === 'preview' && !currentExercise.completed && (
+                          <div className="px-4 py-4">
+                            {/* AMRAP Info Display */}
+                            <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-lg p-6 text-center mb-4 text-white">
+                              <div className="text-5xl font-bold mb-2">
+                                {currentExercise.amrapDurationMinutes}'
+                              </div>
+                              <div className="text-2xl font-bold mb-1">AMRAP</div>
+                              <div className="text-sm font-medium opacity-90">
+                                As Many Rounds As Possible
+                              </div>
+                            </div>
+
+                            {/* Exercises Preview */}
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold text-slate-900">Each Round:</h4>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowVideos(!showVideos)}
+                                className="gap-2"
+                              >
+                                <Video className="w-4 h-4" />
+                                {showVideos ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                {showVideos ? 'Hide' : 'Show'} Videos
+                              </Button>
+                            </div>
+                            <div className="space-y-3 mb-4">
+                              {currentExercise.amrapExercises.map((exercise, idx) => (
+                                <div key={idx} className="border rounded-lg overflow-hidden">
+                                  <div className="flex items-center gap-3 p-3 bg-slate-50">
+                                    <div className="flex-shrink-0">
+                                      <div className="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold">
+                                        {idx + 1}
+                                      </div>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h5 className="font-semibold text-slate-900">{exercise.name}</h5>
+                                      <p className="text-xs text-slate-600">
+                                        {exercise.reps} reps {exercise.weight ? `@ ${exercise.weight}` : ''}
+                                      </p>
+                                      {exercise.notes && (
+                                        <p className="text-xs text-slate-500 italic mt-1">{exercise.notes}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {/* Video Preview - Collapsible */}
+                                  <AnimatePresence>
+                                    {showVideos && exercise.videoId && (
+                                      <motion.div
+                                        initial={{ height: 0 }}
+                                        animate={{ height: "auto" }}
+                                        exit={{ height: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="relative w-full aspect-video">
+                                          <iframe
+                                            src={`https://www.youtube.com/embed/${exercise.videoId}?controls=0`}
+                                            className="w-full h-full"
+                                            allow="encrypted-media"
+                                            allowFullScreen
+                                          />
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Equipment */}
+                            <div className="mb-4">
+                              <p className="text-xs font-medium text-slate-600 mb-2">EQUIPMENT NEEDED:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                {currentExercise.equipment.map((eq) => (
+                                  <Badge key={eq} variant="outline" className="text-xs">
+                                    {eq}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Coach's Note */}
+                            {currentExercise.notes && (
+                              <div className="bg-amber-50 rounded-lg px-3 py-2 mb-4 flex items-center gap-2">
+                                <Lightbulb className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                <p className="text-xs text-slate-900">
+                                  <strong>Tip:</strong> {currentExercise.notes}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Start Button */}
+                            <Button
+                              onClick={handleStartAmrap}
+                              size="lg"
+                              className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                            >
+                              <Rocket className="w-5 h-5" />
+                              Start
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Prep Countdown */}
+                        {timerPhase === 'prep' && (
+                          <div className="px-4 py-8">
+                            <div className="text-center">
+                              <h3 className="text-2xl font-bold text-slate-900 mb-4">Get Ready!</h3>
+                              <div
+                                className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full w-40 h-40 mx-auto flex items-center justify-center text-white shadow-2xl mb-2 cursor-pointer hover:scale-105 transition-transform active:scale-95"
+                                onClick={() => {
+                                  setTimerPhase('active');
+                                  setAmrapTimeRemaining((currentExercise.amrapDurationMinutes || 0) * 60);
+                                }}
+                              >
+                                <div className="text-7xl font-bold">{timeRemainingSeconds}</div>
+                              </div>
+                              <p className="text-sm text-slate-500 mb-6">Tap to Skip</p>
+                              <p className="text-lg text-slate-600 mb-2">Complete as many rounds as possible of:</p>
+                              <div className="text-left max-w-sm mx-auto space-y-1">
+                                {currentExercise.amrapExercises.map((exercise, idx) => (
+                                  <p key={idx} className="text-sm font-medium text-slate-900">
+                                    {idx + 1}. {exercise.name} - {exercise.reps} reps
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Active Timer */}
+                        {(timerPhase === 'active' || timerPhase === 'complete') && (
+                          <div className="px-4 py-6">
+                            {/* Timer Display */}
+                            <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-8 text-center mb-6 shadow-2xl">
+                              <div className="text-7xl font-bold text-white mb-2">
+                                {Math.floor(amrapTimeRemaining / 60)}:{String(amrapTimeRemaining % 60).padStart(2, '0')}
+                              </div>
+                              <div className="text-sm font-medium text-white/90">TIME REMAINING</div>
+                            </div>
+
+                            {/* Exercise List */}
+                            <div className="mb-6">
+                              <h4 className="text-sm font-semibold text-slate-900 mb-3">Each Round:</h4>
+                              <div className="space-y-2">
+                                {currentExercise.amrapExercises.map((exercise, idx) => (
+                                  <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                                    <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center text-sm font-bold">
+                                      {idx + 1}
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm font-semibold text-slate-900">{exercise.name}</p>
+                                      <p className="text-xs text-slate-600">
+                                        {exercise.reps} reps {exercise.weight ? `@ ${exercise.weight}` : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Control Buttons */}
+                            {timerPhase === 'active' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={handlePauseResume}
+                                  variant="outline"
+                                  size="lg"
+                                  className="flex-1 gap-2"
+                                >
+                                  {isPaused ? (
+                                    <>
+                                      <Play className="w-5 h-5" />
+                                      Resume
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Pause className="w-5 h-5" />
+                                      Pause
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  onClick={handleFinishAmrapEarly}
+                                  variant="outline"
+                                  size="lg"
+                                  className="flex-1 border-red-300 text-red-600 hover:bg-red-50 gap-2"
+                                >
+                                  <Flag className="w-5 h-5" />
+                                  Finish Early
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* Complete Message */}
+                            {timerPhase === 'complete' && (
+                              <div className="text-center">
+                                <Trophy className="w-16 h-16 mx-auto mb-4 text-green-600" />
+                                <h3 className="text-2xl font-bold text-green-600 mb-2">Time's Up!</h3>
+                                <p className="text-slate-600">Great work! Recording your rounds...</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Review Mode */}
+                        {timerPhase === 'review' && (
+                          <div className="px-4 py-4">
+                            <h4 className="font-semibold text-slate-900 mb-4">How many full rounds did you complete?</h4>
+
+                            <div className="bg-slate-50 rounded-lg p-6 mb-6 text-center">
+                              <p className="text-xs font-medium text-slate-600 mb-3">TOTAL ROUNDS COMPLETED</p>
+                              <div className="flex items-center justify-center gap-4">
+                                <Button
+                                  variant="outline"
+                                  size="lg"
+                                  onClick={() => setAmrapRoundsCompleted(Math.max(0, amrapRoundsCompleted - 1))}
+                                  className="h-16 w-16 p-0 text-2xl"
+                                >
+                                  -
+                                </Button>
+                                <Input
+                                  type="number"
+                                  inputMode="numeric"
+                                  value={amrapRoundsCompleted}
+                                  onChange={(e) => setAmrapRoundsCompleted(parseInt(e.target.value) || 0)}
+                                  className="text-center text-4xl font-bold w-32 h-16"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="lg"
+                                  onClick={() => setAmrapRoundsCompleted(amrapRoundsCompleted + 1)}
+                                  className="h-16 w-16 p-0 text-2xl"
+                                >
+                                  +
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Round Breakdown */}
+                            <div className="mb-6">
+                              <h5 className="text-sm font-semibold text-slate-900 mb-3">Round Breakdown:</h5>
+                              <div className="space-y-2">
+                                {currentExercise.amrapExercises.map((exercise, idx) => (
+                                  <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                                    <div className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center text-sm font-bold">
+                                      {idx + 1}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-semibold text-slate-900">{exercise.name}</p>
+                                      <p className="text-xs text-slate-600">
+                                        {exercise.reps} reps × {amrapRoundsCompleted} rounds = {parseInt(exercise.reps) * amrapRoundsCompleted} total reps
+                                      </p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setTimerPhase('preview')}
+                                className="flex-1"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={handleSaveAmrap}
                                 size="sm"
                                 className="flex-1 bg-green-600 hover:bg-green-700 gap-2"
                               >
@@ -1844,7 +2790,7 @@ export default function WorkoutDemo() {
           <DialogHeader>
             <DialogTitle>Restart Exercise Group?</DialogTitle>
             <DialogDescription>
-              This will clear your previous results and start the group from the beginning. Your current times will be lost.
+              This will clear your previous results and start the group from the beginning. Your current {currentExercise.type === 'emom' ? 'rounds' : currentExercise.type === 'amrap' ? 'rounds' : 'times'} will be lost.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -1852,7 +2798,13 @@ export default function WorkoutDemo() {
               Cancel
             </Button>
             <Button
-              onClick={handleConfirmRestart}
+              onClick={
+                currentExercise.type === 'emom'
+                  ? handleConfirmRestartEmom
+                  : currentExercise.type === 'amrap'
+                  ? handleConfirmRestartAmrap
+                  : handleConfirmRestart
+              }
               className="bg-red-600 hover:bg-red-700"
             >
               Restart Group
