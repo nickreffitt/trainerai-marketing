@@ -90,8 +90,8 @@ export default function SummaryDemo() {
   const progressData = [
     { week: 'Week 1', target: 100, actual: 102, predicted: null },
     { week: 'Week 2', target: 102.5, actual: 104, predicted: null },
-    { week: 'Week 3', target: 105, actual: 106.5, predicted: null },
-    { week: 'Week 4', target: 107.5, actual: 108, predicted: 108 },
+    { week: 'Week 3', target: 105, actual: 106.5, predicted: 106.5 },
+    { week: 'Week 4', target: 107.5, actual: null, predicted: 108 },
     { week: 'Week 5', target: 110, actual: null, predicted: 111 },
     { week: 'Week 6', target: 110, actual: null, predicted: 112 },
   ];
@@ -478,6 +478,21 @@ export default function SummaryDemo() {
                 </Badge>
               </motion.div>
             </div>
+
+            {/* View Plan Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.6 }}
+              className=""
+            >
+              <Link href="/demo/plan" className="block">
+                <Button variant="outline" className="w-full text-white border-white/30 hover:bg-white/10 bg-white/5 hover:text-white">
+                  <ClipboardList className="w-4 h-4 mr-2" />
+                  View Your Block & Goals
+                </Button>
+              </Link>
+            </motion.div>
           </Card>
         </motion.div>
 

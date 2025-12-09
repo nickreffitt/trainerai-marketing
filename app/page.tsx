@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { ScheduleDemoModal } from "@/components/schedule-demo-modal";
+import Image from "next/image";
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<string>("summary");
@@ -49,24 +50,59 @@ export default function Home() {
     title: string;
     description: string;
     features: string[];
+    mobileImages?: string[];
   }> = {
     summary: {
       id: "summary",
       title: "Track Progress in Real-Time",
       description: "See comprehensive performance metrics, goal trajectories, and AI-powered insights that adapt to each client's unique fitness journey.",
       features: ["Performance Scoring", "Goal Tracking", "Progress Predictions", "Adaptive Metrics"],
-    },
-    chat: {
-      id: "chat",
-      title: "24/7 AI Coaching Support",
-      description: "Natural language interaction with AI coach for instant guidance, injury detection, and personalized exercise substitutions—no more waiting for replies.",
-      features: ["Instant Responses", "Injury Detection", "Smart Substitutions", "Motivational Support"],
+      mobileImages: [
+        "/img/IMG_0025.PNG", 
+        "/img/IMG_0024.PNG",
+        "/img/IMG_0035.PNG",
+        "/img/IMG_0036.PNG",
+        "/img/IMG_0037.PNG",
+        "/img/IMG_0038.PNG",
+      ],
     },
     workout: {
       id: "workout",
       title: "Adaptive Workout Sessions",
       description: "Real-time workout adjustments based on available equipment, injuries, or preferences. Every session is personalized to the client's current situation.",
       features: ["Equipment Alternatives", "Form Guidance", "Progress Tracking", "Real-time Adjustments"],
+      mobileImages: [
+        "/img/IMG_0039.PNG", 
+        "/img/IMG_0027.PNG", 
+        "/img/IMG_0040.PNG", 
+        "/img/IMG_0028.PNG", 
+        "/img/IMG_0030.PNG", 
+        "/img/IMG_0031.PNG",
+      ],
+    },
+    plan: {
+      id: "plan",
+      title: "Smart Weekly Planning",
+      description: "Comprehensive weekly overview combining training schedules, nutrition targets, and recovery goals—all dynamically adjusted based on client progress and feedback.",
+      features: ["Training Calendar", "Nutrition Targets", "Recovery Planning", "Coach Insights"],
+      mobileImages: [
+        "/img/IMG_0032.PNG", 
+        "/img/IMG_0033.PNG", 
+        "/img/IMG_0034.PNG",
+        "/img/IMG_0041.PNG",
+        "/img/IMG_0042.PNG",
+      ],
+    },
+    chat: {
+      id: "chat",
+      title: "24/7 AI Coaching Support",
+      description: "Natural language interaction with AI coach for instant guidance, injury detection, and personalized exercise substitutions—no more waiting for replies.",
+      features: ["Instant Responses", "Injury Detection", "Smart Substitutions", "Motivational Support"],
+      mobileImages: [
+        "/img/IMG_0043.PNG", 
+        "/img/IMG_0044.PNG", 
+        "/img/IMG_0045.PNG",
+      ],
     },
   };
 
@@ -133,7 +169,7 @@ export default function Home() {
             Scale your coaching to 3-5x more clients while saving 10+ hours weekly. AI adapts each client's program in real-time to maximize results.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <div className="hidden md:flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button
               size="lg"
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
@@ -151,7 +187,7 @@ export default function Home() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
+          <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
             <div className="text-center">
               <div className="text-4xl font-bold text-white mb-2">3-5x</div>
               <div className="text-slate-400">More Clients Per Trainer</div>
@@ -185,7 +221,7 @@ export default function Home() {
               Experience TrainerAI
             </h2>
             <p className="text-slate-400 text-sm">
-              Swipe through key features
+              Explore all features below
             </p>
           </motion.div>
         </div>
@@ -211,9 +247,79 @@ export default function Home() {
         </div>
 
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-start max-w-7xl mx-auto">
-            {/* iPhone Mockup - Left Side (Hidden on Mobile) */}
-            <div className="hidden md:flex justify-center lg:justify-end lg:sticky lg:top-8 relative">
+          {/* Mobile: Vertical Stack of Cards */}
+          <div className="md:hidden space-y-6">
+            {sectionKeys.map((key) => {
+              const section = sections[key];
+              return (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-100px" }}
+                  transition={{ duration: 0.5 }}
+                  className="bg-slate-800/50 border border-slate-700 rounded-3xl p-6"
+                >
+                  <h3 className="text-2xl font-bold text-white mb-4 leading-tight">
+                    {section.title}
+                  </h3>
+                  <p className="text-base text-slate-300 mb-6">
+                    {section.description}
+                  </p>
+
+                  {/* Mobile Images */}
+                  {section.mobileImages && section.mobileImages.length > 0 && (
+                    <div className="mb-6 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2">
+                      {section.mobileImages.map((imageSrc, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0 }}
+                          whileInView={{ opacity: 1 }}
+                          viewport={{ once: true, margin: "-50px" }}
+                          transition={{ duration: 0.5, delay: idx * 0.1 }}
+                          className="flex-shrink-0 snap-center w-[200px] relative h-[365px] rounded-2xl overflow-hidden border border-slate-600 shadow-lg"
+                        >
+                          <Image
+                            src={imageSrc}
+                            alt={`${section.title} screenshot ${idx + 1}`}
+                            fill
+                            className="object-cover object-top"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-800/50 pointer-events-none" />
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="space-y-2.5 mb-6">
+                    {section.features.map((feature) => (
+                      <div
+                        key={feature}
+                        className="flex items-center gap-3 text-slate-200 text-sm"
+                      >
+                        <span className="text-green-400 text-base">✓</span>
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                    onClick={() => window.open(`/demo/${key}?title=${encodeURIComponent(title)}&clientName=${encodeURIComponent(clientName)}`, '_blank')}
+                  >
+                    Try Demo Feature →
+                  </Button>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: Original Layout */}
+          <div className="hidden md:grid grid-cols-1 lg:grid-cols-2 gap-0 items-start max-w-7xl mx-auto">
+            {/* iPhone Mockup - Left Side */}
+            <div className="flex justify-center lg:justify-end lg:sticky lg:top-8 relative">
               {/* Interactive Demo Badge */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -253,82 +359,8 @@ export default function Home() {
                   transition={{ duration: 0.3 }}
                   className="w-full"
                 >
-                  {/* Mobile Card Layout */}
-                  <div className="md:hidden bg-slate-800/50 border border-slate-700 rounded-3xl p-6 mb-6">
-                    <Badge variant="secondary" className="mb-4">
-                      Feature {currentIndex + 1} of {sectionKeys.length}
-                    </Badge>
-                    <h2 className="text-3xl font-bold text-white mb-4 leading-tight">
-                      {activeSection.title}
-                    </h2>
-                    <p className="text-base text-slate-300 mb-6">
-                      {activeSection.description}
-                    </p>
-
-                    <div className="space-y-2.5 mb-6">
-                      {activeSection.features.map((feature, idx) => (
-                        <motion.div
-                          key={feature}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className="flex items-center gap-3 text-slate-200 text-sm"
-                        >
-                          <span className="text-green-400 text-base">✓</span>
-                          <span>{feature}</span>
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    <Button
-                      size="lg"
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
-                      onClick={() => window.open(`/demo/${currentPage}?title=${encodeURIComponent(title)}&clientName=${encodeURIComponent(clientName)}`, '_blank')}
-                    >
-                      Try Demo Feature →
-                    </Button>
-                  </div>
-
-                  {/* Mobile Navigation */}
-                  <div className="md:hidden flex items-center justify-between mb-8 px-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(sectionKeys[Math.max(0, currentIndex - 1)])}
-                      disabled={currentIndex === 0}
-                      className="border-slate-600 text-slate-900 bg-white hover:bg-slate-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      ← Previous
-                    </Button>
-
-                    <div className="flex gap-2">
-                      {sectionKeys.map((key, idx) => (
-                        <button
-                          key={key}
-                          onClick={() => setCurrentPage(key)}
-                          className={`${
-                            currentPage === key
-                              ? "w-8 h-2 bg-slate-300"
-                              : "w-2 h-2 bg-slate-600"
-                          } rounded-full transition-all duration-300 cursor-pointer`}
-                          aria-label={`View ${sections[key].title}`}
-                        />
-                      ))}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(sectionKeys[Math.min(sectionKeys.length - 1, currentIndex + 1)])}
-                      disabled={currentIndex === sectionKeys.length - 1}
-                      className="border-slate-600 text-slate-900 bg-white hover:bg-slate-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      Next →
-                    </Button>
-                  </div>
-
                   {/* Desktop Layout */}
-                  <div className="hidden md:block">
+                  <div>
                     <Badge variant="secondary" className="mb-4">
                       {`Feature`}
                     </Badge>
